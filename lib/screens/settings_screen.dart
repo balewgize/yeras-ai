@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../theme/theme_controller.dart';
+import '../providers/theme_controller.dart';
+import '../widgets/section_header.dart';
+import 'device_info_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -17,14 +19,7 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
         children: [
-          Text(
-            'Appearance',
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1,
-            ),
-          ),
+          const SectionHeader('Appearance'),
           const SizedBox(height: 12),
           SegmentedButton<ThemeMode>(
             segments: const [
@@ -38,6 +33,27 @@ class SettingsScreen extends ConsumerWidget {
                   .read(themeControllerProvider.notifier)
                   .setThemeMode(selection.first);
             },
+          ),
+          const SizedBox(height: 32),
+          const SectionHeader('Device'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Device details'),
+            subtitle: Text(
+              'RAM, storage, and accelerator detection',
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: scheme.onSurfaceVariant,
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DeviceInfoScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 32),
           Text(

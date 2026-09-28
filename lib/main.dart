@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/theme_controller.dart';
 import 'screens/chat_list_screen.dart';
 import 'theme/app_theme.dart';
-import 'theme/theme_controller.dart';
 
 void main() {
   runApp(const ProviderScope(child: StayLocalApp()));
