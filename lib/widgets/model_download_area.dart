@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/model_catalog.dart';
 import '../models/model_download.dart';
 import '../providers/model_download_providers.dart';
+import '../screens/inference_debug_screen.dart';
 import '../utils/format.dart';
 
 class ModelDownloadArea extends ConsumerWidget {
@@ -255,6 +256,14 @@ class _ReadyRow extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => InferenceDebugScreen(modelId: model.id),
+            ),
+          ),
+          child: const Text('Test'),
         ),
         IconButton(
           tooltip: 'Delete model',
