@@ -1,6 +1,6 @@
 String formatBytes(int bytes) {
-  const gb = 1024 * 1024 * 1024;
-  const mb = 1024 * 1024;
+  const gb = 1000 * 1000 * 1000;
+  const mb = 1000 * 1000;
   if (bytes >= gb) {
     final value = bytes / gb;
     return value >= 100

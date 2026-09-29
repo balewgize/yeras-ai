@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_controller.dart';
 import '../widgets/section_header.dart';
 import 'device_info_screen.dart';
+import 'model_catalog_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -33,6 +34,27 @@ class SettingsScreen extends ConsumerWidget {
                   .read(themeControllerProvider.notifier)
                   .setThemeMode(selection.first);
             },
+          ),
+          const SizedBox(height: 32),
+          const SectionHeader('Models'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Models'),
+            subtitle: Text(
+              'Curated list for this device',
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: scheme.onSurfaceVariant,
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ModelCatalogScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 32),
           const SectionHeader('Device'),

@@ -51,12 +51,12 @@ void main() {
 
   group('formatBytes', () {
     test('formats gigabytes with one decimal', () {
-      expect(formatBytes(8 * _gb), '8.0 GB');
-      expect(formatBytes(2899102924), '2.7 GB');
+      expect(formatBytes(8 * _gb), '8.6 GB');
+      expect(formatBytes(2899102924), '2.9 GB');
     });
 
     test('formats megabytes without decimals', () {
-      expect(formatBytes(512 * 1024 * 1024), '512 MB');
+      expect(formatBytes(512 * 1024 * 1024), '537 MB');
     });
   });
 
@@ -160,11 +160,11 @@ void main() {
     expect(find.text('Samsung'), findsOneWidget);
     expect(find.text('SM-A366B'), findsOneWidget);
     expect(find.text('Qualcomm'), findsOneWidget);
-    expect(find.text('8.0 GB'), findsOneWidget);
-    expect(find.text('4.0 GB'), findsOneWidget);
-    expect(find.text('≤ 2.8 GB'), findsOneWidget);
-    expect(find.text('32.0 GB'), findsOneWidget);
-    expect(find.text('128 GB'), findsOneWidget);
+    expect(find.text('8.6 GB'), findsOneWidget);
+    expect(find.text('4.3 GB'), findsOneWidget);
+    expect(find.text('≤ 3.0 GB'), findsOneWidget);
+    expect(find.text('34.4 GB'), findsOneWidget);
+    expect(find.text('137 GB'), findsOneWidget);
 
     final scrollable = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(

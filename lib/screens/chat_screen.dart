@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'model_catalog_screen.dart';
+
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
 
@@ -23,6 +25,15 @@ class ChatScreen extends StatelessWidget {
                 style: textTheme.bodyMedium
                     ?.copyWith(color: scheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ModelCatalogScreen(),
+                  ),
+                ),
+                child: const Text('Browse models'),
               ),
             ],
           ),
