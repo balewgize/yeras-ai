@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/repositories/inference_repository.dart';
 import '../models/chat.dart';
+import '../models/conversation.dart';
 import '../models/inference.dart';
 import '../models/model_catalog.dart';
 import '../models/model_download.dart';
+import 'chat_history_providers.dart';
 import 'device_capability_providers.dart';
 import 'foreground_generation_providers.dart';
 import 'inference_providers.dart';
@@ -75,25 +77,35 @@ final activeModelProvider = Provider<CatalogModel?>((ref) {
 
 enum ChatStage { idle, loadingModel, generating }
 
-/// In-memory single conversation (Phase 5). History persistence is Phase 7.
+/// Active conversation state. Messages also persist to Phase 7 storage as
+/// they stream, so history survives backgrounding and force-closes.
 class ChatState {
   const ChatState({
     this.messages = const [],
     this.stage = ChatStage.idle,
     this.loadingModelName,
     this.loadedModelId,
+    this.activeConversationId,
     this.errorMessage,
     this.infoMessage,
     this.contextFull = false,
+    this.wasInterrupted = false,
   });
 
   final List<ChatMessage> messages;
   final ChatStage stage;
   final String? loadingModelName;
   final String? loadedModelId;
+
+  /// Conversation these messages belong to. Null until the first send.
+  final String? activeConversationId;
   final String? errorMessage;
   final String? infoMessage;
   final bool contextFull;
+
+  /// True when the last reply never finished because the app died
+  /// mid-generation; cleared by the next send.
+  final bool wasInterrupted;
 
   bool get isBusy =>
       stage == ChatStage.loadingModel || stage == ChatStage.generating;
@@ -103,10 +115,13 @@ class ChatState {
     ChatStage? stage,
     String? loadingModelName,
     String? loadedModelId,
+    String? activeConversationId,
+    bool clearActiveConversation = false,
     bool clearLoadedModel = false,
     String? errorMessage,
     String? infoMessage,
     bool? contextFull,
+    bool? wasInterrupted,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -114,9 +129,13 @@ class ChatState {
       loadingModelName: loadingModelName,
       loadedModelId:
           clearLoadedModel ? null : (loadedModelId ?? this.loadedModelId),
+      activeConversationId: clearActiveConversation
+          ? null
+          : (activeConversationId ?? this.activeConversationId),
       errorMessage: errorMessage,
       infoMessage: infoMessage,
       contextFull: contextFull ?? false,
+      wasInterrupted: wasInterrupted ?? false,
     );
   }
 }
@@ -133,8 +152,27 @@ final isModelLoadedProvider = Provider<bool>((ref) {
 class ChatController extends Notifier<ChatState> {
   int _generation = 0;
 
+  /// Working copy of the active conversation. Every persist writes this
+  /// (with the current messages) through the conversations controller.
+  Conversation? _active;
+
+  /// Throttled stream persistence: rewrite storage at most every
+  /// [_streamFlushInterval] or [_streamFlushTokens] tokens.
+  DateTime? _lastStreamFlush;
+  int _tokensSinceFlush = 0;
+
+  static const Duration _streamFlushInterval = Duration(milliseconds: 400);
+  static const int _streamFlushTokens = 8;
+
+  static const String _lastConversationPrefKey =
+      'last_active_conversation_id';
+  static int _conversationSequence = 0;
+
   @override
-  ChatState build() => const ChatState();
+  ChatState build() {
+    _restoreLastActiveConversation();
+    return const ChatState();
+  }
 
   /// Android foreground service keeps the process (and generation) alive
   /// while the app is backgrounded. Held exactly while busy, never longer.
@@ -144,6 +182,78 @@ class ChatController extends Notifier<ChatState> {
 
   void _endBusyForeground() {
     unawaited(ref.read(foregroundGenerationProvider).stop());
+  }
+
+  /// Reopens the conversation active at last shutdown (or the one killed
+  /// mid-reply), so force-close is a resume, not a reset.
+  Future<void> _restoreLastActiveConversation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString(_lastConversationPrefKey);
+    if (id == null || id.isEmpty) return;
+    final conversations =
+        await ref.read(chatHistoryRepositoryProvider).loadConversations();
+    Conversation? match;
+    for (final conversation in conversations) {
+      if (conversation.id == id) match = conversation;
+    }
+    if (match == null) return;
+    _active = match;
+    state = ChatState(
+      messages: match.messages,
+      activeConversationId: match.id,
+      wasInterrupted: match.interrupted,
+    );
+  }
+
+  Future<void> _saveLastActiveConversationId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastConversationPrefKey, id);
+  }
+
+  Future<void> _clearLastActiveConversationId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lastConversationPrefKey);
+  }
+
+  String _newConversationId() {
+    _conversationSequence++;
+    return '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
+        '-$_conversationSequence';
+  }
+
+  /// Writes the active conversation (current messages + status flags) to
+  /// storage; the drawer list refreshes from the same upsert.
+  Future<void> _persistActiveConversation({
+    required bool generating,
+    required bool interrupted,
+  }) async {
+    final active = _active;
+    if (active == null) return;
+    _active = active.copyWith(
+      messages: state.messages,
+      updatedAt: DateTime.now(),
+      generating: generating,
+      interrupted: interrupted,
+    );
+    await ref.read(conversationsProvider.notifier).upsert(_active!);
+  }
+
+  /// Writes out a conversation detached by newChat()/openConversation()
+  /// while its reply was still streaming: an explicit abandon, so the
+  /// partial reply persists cleanly (generating cleared, no interrupted
+  /// flag) instead of looking like a crash.
+  Future<void> _finalizeDetachedConversation(
+    Conversation active,
+    List<ChatMessage> messages,
+  ) async {
+    await ref.read(conversationsProvider.notifier).upsert(
+          active.copyWith(
+            messages: messages,
+            updatedAt: DateTime.now(),
+            generating: false,
+            interrupted: false,
+          ),
+        );
   }
 
   Future<void> send(String text) async {
@@ -167,15 +277,37 @@ class ChatController extends Notifier<ChatState> {
       return;
     }
 
-    final history = [
-      ...state.messages,
-      ChatMessage(role: ChatRole.user, text: prompt),
-    ];
+    // Drop a trailing empty assistant bubble left by an interrupted reply.
+    final prior = [...state.messages];
+    if (prior.isNotEmpty &&
+        prior.last.role == ChatRole.assistant &&
+        prior.last.text.isEmpty) {
+      prior.removeLast();
+    }
+    final now = DateTime.now();
+    final base = _active ??
+        Conversation(
+          id: _newConversationId(),
+          modelId: model.id,
+          createdAt: now,
+          updatedAt: now,
+        );
+    _active = base.copyWith(
+      messages: [...prior, ChatMessage(role: ChatRole.user, text: prompt)],
+      updatedAt: now,
+      generating: false,
+      interrupted: false,
+    );
+    final history = _active!.messages;
     state = state.copyWith(
       messages: history,
+      activeConversationId: _active!.id,
       errorMessage: null,
       infoMessage: null,
+      wasInterrupted: false,
     );
+    await ref.read(conversationsProvider.notifier).upsert(_active!);
+    unawaited(_saveLastActiveConversationId(_active!.id));
     await _generate(model, history);
   }
 
@@ -197,8 +329,72 @@ class ChatController extends Notifier<ChatState> {
         history.last.text.isEmpty) {
       history.removeLast();
     }
-    state = state.copyWith(messages: history, errorMessage: null);
+    state = state.copyWith(
+      messages: history,
+      errorMessage: null,
+      wasInterrupted: false,
+    );
     await _generate(model, history);
+  }
+
+  /// Resume the conversation with [id] in the drawer. Stays on-model:
+  /// the resident model is kept, its gate still applies.
+  Future<void> openConversation(String id) async {
+    Conversation? match;
+    for (final conversation in ref.read(conversationsProvider)) {
+      if (conversation.id == id) match = conversation;
+    }
+    if (match == null || match.id == state.activeConversationId) return;
+    // Switching mid-generation finalizes the abandoned reply cleanly.
+    final detached = state.isBusy ? _active : null;
+    final detachedMessages = state.messages;
+    if (state.isBusy) stop();
+    _active = match;
+    if (detached != null &&
+        detached.generating &&
+        detachedMessages.isNotEmpty) {
+      unawaited(_finalizeDetachedConversation(detached, detachedMessages));
+    }
+    state = ChatState(
+      messages: match.messages,
+      loadedModelId: state.loadedModelId,
+      activeConversationId: match.id,
+      wasInterrupted: match.interrupted,
+    );
+    unawaited(_saveLastActiveConversationId(match.id));
+  }
+
+  Future<void> renameConversation(String id, String title) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return;
+    await ref
+        .read(conversationsProvider.notifier)
+        .renameConversation(id, trimmed);
+    // Keep the working copy in sync so the next send doesn't silently
+    // revert the rename in storage.
+    if (_active?.id == id) _active = _active!.copyWith(title: trimmed);
+  }
+
+  /// Delete must actually work per-conversation: it removes exactly [id]
+  /// from storage, and clears the screen only when it was the active one.
+  Future<void> deleteConversation(String id) async {
+    await ref.read(conversationsProvider.notifier).deleteConversation(id);
+    if (_active?.id != id) return;
+    _generation++;
+    if (state.isBusy) {
+      ref.read(inferenceRepositoryProvider).cancelGeneration();
+      _endBusyForeground();
+    }
+    _active = null;
+    unawaited(_clearLastActiveConversationId());
+    state = state.copyWith(
+      messages: const [],
+      stage: ChatStage.idle,
+      errorMessage: null,
+      infoMessage: null,
+      clearActiveConversation: true,
+      wasInterrupted: false,
+    );
   }
 
   /// Intentionally load the active model into memory (top-bar action).
@@ -304,6 +500,7 @@ class ChatController extends Notifier<ChatState> {
     final repository = ref.read(inferenceRepositoryProvider);
     bool isStale() => turn != _generation;
     _beginBusyForeground();
+    final conversationId = state.activeConversationId;
 
     try {
       // Defensive: send()/retry() hard-gate on loadedModelId, so this is
@@ -313,6 +510,8 @@ class ChatController extends Notifier<ChatState> {
         state = state.copyWith(loadedModelId: model.id);
       }
 
+      _tokensSinceFlush = 0;
+      _lastStreamFlush = DateTime.now();
       state = state.copyWith(
         stage: ChatStage.generating,
         messages: [
@@ -320,6 +519,10 @@ class ChatController extends Notifier<ChatState> {
           const ChatMessage(role: ChatRole.assistant, text: ''),
         ],
       );
+      // Mark streaming in storage up front so a process death before the
+      // first token still restores as an interrupted reply.
+      await _persistActiveConversation(generating: true, interrupted: false);
+
       final result = await repository.chat(
         history,
         onToken: (token) {
@@ -333,6 +536,21 @@ class ChatController extends Notifier<ChatState> {
               stage: ChatStage.generating,
               messages: messages,
             );
+            _tokensSinceFlush++;
+            final now = DateTime.now();
+            if (_tokensSinceFlush >= _streamFlushTokens ||
+                now.difference(_lastStreamFlush!) >= _streamFlushInterval) {
+              _tokensSinceFlush = 0;
+              _lastStreamFlush = now;
+              // Streamed text survives a force-close mid-reply; throttled
+              // so storage isn't rewritten on every token.
+              unawaited(
+                _persistActiveConversation(
+                  generating: true,
+                  interrupted: false,
+                ),
+              );
+            }
           }
         },
       );
@@ -346,29 +564,37 @@ class ChatController extends Notifier<ChatState> {
         state = state.copyWith(stage: ChatStage.idle, messages: messages);
       }
     } on ModelTooLargeException catch (error) {
-      if (isStale()) return;
-      state = state.copyWith(
-        stage: ChatStage.idle,
-        errorMessage: error.message,
-      );
+      if (!isStale()) {
+        state = state.copyWith(
+          stage: ChatStage.idle,
+          errorMessage: error.message,
+        );
+      }
     } catch (error) {
-      if (isStale()) return;
-      if (isContextFullError(error)) {
-        state = state.copyWith(
-          stage: ChatStage.idle,
-          contextFull: true,
-          errorMessage:
-              'This conversation outgrew the model context window. '
-              'Start a new chat to continue.',
-        );
-      } else {
-        state = state.copyWith(
-          stage: ChatStage.idle,
-          errorMessage: '$error',
-        );
+      if (!isStale()) {
+        if (isContextFullError(error)) {
+          state = state.copyWith(
+            stage: ChatStage.idle,
+            contextFull: true,
+            errorMessage:
+                'This conversation outgrew the model context window. '
+                'Start a new chat to continue.',
+          );
+        } else {
+          state = state.copyWith(
+            stage: ChatStage.idle,
+            errorMessage: '$error',
+          );
+        }
       }
     } finally {
       _endBusyForeground();
+    }
+    // Persist the finished/failed reply — but only if this generation
+    // still owns the active conversation (a switch/newChat/delete since
+    // detaches it and finalizes separately).
+    if (_active?.id == conversationId) {
+      await _persistActiveConversation(generating: false, interrupted: false);
     }
   }
 
@@ -379,20 +605,32 @@ class ChatController extends Notifier<ChatState> {
     // Stop the service now rather than waiting for the cancelled stream
     // to unwind; the finally in _generate is deduped by the running flag.
     _endBusyForeground();
+    // The stopped-early reply persists when the cancelled stream unwinds.
     state = state.copyWith(stage: ChatStage.idle);
   }
 
   void newChat() {
     _generation++;
+    final detached = _active;
+    final detachedMessages = state.messages;
     if (state.isBusy) {
       ref.read(inferenceRepositoryProvider).cancelGeneration();
       _endBusyForeground();
     }
+    _active = null;
+    if (detached != null &&
+        detached.generating &&
+        detachedMessages.isNotEmpty) {
+      unawaited(_finalizeDetachedConversation(detached, detachedMessages));
+    }
+    unawaited(_clearLastActiveConversationId());
     state = state.copyWith(
       messages: const [],
       stage: ChatStage.idle,
       errorMessage: null,
       infoMessage: null,
+      clearActiveConversation: true,
+      wasInterrupted: false,
     );
   }
 }

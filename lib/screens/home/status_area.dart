@@ -107,7 +107,7 @@ class StatusArea extends ConsumerWidget {
     if (active != null) {
       final isLoaded = chat.loadedModelId == active.id;
       if (!isLoaded) {
-        return Padding(
+        final loadButton = Padding(
           padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
           child: FilledButton.tonal(
             onPressed: chat.isBusy ? null : onLoad,
@@ -116,10 +116,30 @@ class StatusArea extends ConsumerWidget {
             ),
           ),
         );
+        if (chat.wasInterrupted) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              row(
+                text: 'The last reply was interrupted when the app closed.',
+                color: scheme.onSurfaceVariant,
+              ),
+              loadButton,
+            ],
+          );
+        }
+        return loadButton;
       }
     } else {
       return row(
         text: 'Download a model first, then ask away.',
+        color: scheme.onSurfaceVariant,
+      );
+    }
+
+    if (chat.wasInterrupted) {
+      return row(
+        text: 'The last reply was interrupted when the app closed.',
         color: scheme.onSurfaceVariant,
       );
     }

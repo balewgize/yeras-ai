@@ -9,11 +9,16 @@ class MessageList extends StatelessWidget {
     required this.scrollController,
     required this.messages,
     required this.streaming,
+    this.showInterrupted = false,
   });
 
   final ScrollController scrollController;
   final List<ChatMessage> messages;
   final bool streaming;
+
+  /// True when the conversation was restored from an interrupted reply:
+  /// the trailing assistant bubble gets an in-place Interrupted caption.
+  final bool showInterrupted;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +36,10 @@ class MessageList extends StatelessWidget {
               live: streaming && isLast,
               tokensPerSecond: message.tokensPerSecond,
               showRate: !streaming || !isLast,
+              interrupted: showInterrupted &&
+                  isLast &&
+                  message.role == ChatRole.assistant &&
+                  !streaming,
             ),
         };
       },
@@ -72,12 +81,14 @@ class AssistantBubble extends StatelessWidget {
     required this.live,
     required this.tokensPerSecond,
     required this.showRate,
+    this.interrupted = false,
   });
 
   final String text;
   final bool live;
   final double? tokensPerSecond;
   final bool showRate;
+  final bool interrupted;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +124,16 @@ class AssistantBubble extends StatelessWidget {
                 '${rate.toStringAsFixed(1)} tok/s · on-device',
                 style: textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (interrupted) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Interrupted',
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ],

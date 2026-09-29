@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/conversation.dart';
 import '../../providers/chat_providers.dart';
 import '../model_catalog_screen.dart';
 import '../settings_screen.dart';
@@ -113,6 +114,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(chatControllerProvider.notifier).newChat();
   }
 
+  void _openConversation(String id) {
+    Navigator.of(context).pop();
+    _controller.clear();
+    // Sync state update inside: the screen swaps conversation immediately.
+    ref.read(chatControllerProvider.notifier).openConversation(id);
+  }
+
+  Future<void> _renameConversation(Conversation conversation) async {
+    final nameController =
+        TextEditingController(text: conversation.displayName);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rename chat'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          maxLength: 100,
+          onSubmitted: (_) =>
+              Navigator.of(dialogContext).pop(nameController.text),
+          decoration: const InputDecoration(hintText: 'Chat name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(nameController.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    final name = result?.trim();
+    if (!mounted || name == null || name.isEmpty) return;
+    await ref
+        .read(chatControllerProvider.notifier)
+        .renameConversation(conversation.id, name);
+  }
+
+  Future<void> _deleteConversation(Conversation conversation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete chat?'),
+        content: Text(
+          '"${conversation.displayName}" will be permanently deleted. '
+          'This can\'t be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    await ref
+        .read(chatControllerProvider.notifier)
+        .deleteConversation(conversation.id);
+  }
+
   void _send() {
     final text = _controller.text;
     if (text.trim().isEmpty) return;
@@ -175,6 +250,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       drawer: HomeDrawer(
         onNewChat: _newChat,
+        onOpenConversation: _openConversation,
+        onRenameConversation: _renameConversation,
+        onDeleteConversation: _deleteConversation,
         onModels: _openModelsFromDrawer,
         onSettings: _openSettings,
       ),
@@ -211,6 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       scrollController: _scroll,
                       messages: chat.messages,
                       streaming: chat.stage == ChatStage.generating,
+                      showInterrupted: chat.wasInterrupted,
                     ),
             ),
             StatusArea(
