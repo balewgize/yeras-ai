@@ -78,7 +78,6 @@ String? ramRefusalReason({
       'only about ${formatBytes(budget)} is safely usable for models on '
       'this device. Loading it anyway would likely crash the app.';
 }
-
 String engineAcceleratorLabel(DeviceCapabilities capabilities) {
   for (final accelerator in capabilities.accelerators) {
     if (accelerator.type == AcceleratorType.gpu) {
@@ -89,4 +88,19 @@ String engineAcceleratorLabel(DeviceCapabilities capabilities) {
     }
   }
   return 'CPU · no GPU detected';
+}
+
+/// True when [error] looks like the conversation outgrew the model's
+/// context window (KV cache full), as opposed to a load/generation bug.
+/// Callers surface a clear "context full — start a new chat" state instead
+/// of stalling or cutting off silently.
+bool isContextFullError(Object error) {
+  final message = '$error'.toLowerCase();
+  return message.contains('n_ctx') ||
+      message.contains('context') && message.contains('full') ||
+      message.contains('context') && message.contains('exceed') ||
+      message.contains('kv cache') ||
+      message.contains('kv_cache') ||
+      message.contains('no kv slot') ||
+      message.contains('prompt too long');
 }

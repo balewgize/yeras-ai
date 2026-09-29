@@ -26,8 +26,11 @@ class InferenceDebugController extends Notifier<InferenceDebugState> {
 
   @override
   InferenceDebugState build() {
+    // Capture the repository before registering the callback: ref.read
+    // inside onDispose is illegal and crashes at teardown.
+    final repository = ref.watch(inferenceRepositoryProvider);
     ref.onDispose(() {
-      unawaited(ref.read(inferenceRepositoryProvider).unload());
+      unawaited(repository.unload());
     });
     return const InferenceDebugState();
   }

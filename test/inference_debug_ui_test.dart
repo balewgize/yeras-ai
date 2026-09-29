@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,12 +8,12 @@ import 'package:staylocal/data/repositories/inference_repository.dart';
 import 'package:staylocal/main.dart';
 import 'package:staylocal/models/device_capabilities.dart';
 import 'package:staylocal/models/inference.dart';
-import 'package:staylocal/models/model_catalog.dart';
 import 'package:staylocal/models/model_download.dart';
 import 'package:staylocal/providers/device_capability_providers.dart';
 import 'package:staylocal/providers/inference_providers.dart';
 import 'package:staylocal/providers/model_download_providers.dart';
 
+import 'fakes/fake_inference_repository.dart';
 import 'fakes/fake_model_download_repository.dart';
 
 class _MidRangeDeviceCapabilityRepository
@@ -49,51 +49,10 @@ class _MidRangeDeviceCapabilityRepository
   );
 }
 
-class _FakeInferenceRepository implements InferenceRepository {
-  LoadedModelInfo? loadedInfo;
-  Object? loadError;
-  List<String> tokenScript = const <String>[];
-  InferenceResult? scriptResult;
-  int stopCalls = 0;
-  int unloadCalls = 0;
-
-  @override
-  Future<LoadedModelInfo> loadModel({
-    required CatalogModel model,
-    required String filePath,
-    required int fileBytes,
-    required DeviceCapabilities capabilities,
-  }) async {
-    if (loadError != null) throw loadError!;
-    return loadedInfo!;
-  }
-
-  @override
-  Future<InferenceResult> generate(
-    String prompt, {
-    required void Function(String token) onToken,
-  }) async {
-    for (final token in tokenScript) {
-      onToken(token);
-    }
-    return scriptResult ??
-        const InferenceResult(text: '', completionTokens: 0);
-  }
-
-  @override
-  void cancelGeneration() => stopCalls++;
-
-  @override
-  Future<void> unload() async => unloadCalls++;
-
-  @override
-  Future<void> dispose() async {}
-}
-
 Future<void> _openDebugScreen(
   WidgetTester tester, {
   required FakeModelDownloadRepository downloads,
-  required _FakeInferenceRepository inference,
+  required FakeInferenceRepository inference,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -109,15 +68,12 @@ Future<void> _openDebugScreen(
   );
   await tester.pumpAndSettle();
 
-  await tester.tap(find.byIcon(Icons.settings_outlined));
+  await tester.tap(find.byTooltip('Menu'));
   await tester.pumpAndSettle();
-  await tester.tap(
-    find.descendant(
-      of: find.byType(ListTile),
-      matching: find.text('Models'),
-    ),
-  );
-  await tester.pumpAndSettle();
+  await tester.tap(find.text('Models'));
+  // The catalog keeps download streams alive, so settle never completes.
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
 
   downloads.emit(
     'llama-3.2-1b',
@@ -137,12 +93,15 @@ Future<void> _openDebugScreen(
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // Asset strings are cached in a completed future bound to the zone of
+    // the first test; without clearing, later widget tests never resolve.
+    rootBundle.clear();
   });
 
   testWidgets('debug screen streams raw output with tokens per second',
       (WidgetTester tester) async {
     final downloads = FakeModelDownloadRepository();
-    final inference = _FakeInferenceRepository()
+    final inference = FakeInferenceRepository()
       ..loadedInfo = const LoadedModelInfo(
         modelName: 'Llama 3.2 1B',
         filePath: '/cache/models/model.gguf',
@@ -173,7 +132,7 @@ void main() {
   testWidgets('an oversized model is refused with a clear message, no crash',
       (WidgetTester tester) async {
     final downloads = FakeModelDownloadRepository();
-    final inference = _FakeInferenceRepository()
+    final inference = FakeInferenceRepository()
       ..loadError = const ModelTooLargeException(
         'Llama 3.1 8B needs about 3.9 GB to load, but only about 2.8 GB is '
         'safely usable for models on this device. Loading it anyway would '

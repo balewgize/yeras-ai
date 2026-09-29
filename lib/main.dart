@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/theme_controller.dart';
-import 'screens/chat_list_screen.dart';
+import 'screens/home/home_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -22,7 +22,7 @@ class StayLocalApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
-      home: const ChatListScreen(),
+      home: const HomeScreen(),
     );
   }
 }

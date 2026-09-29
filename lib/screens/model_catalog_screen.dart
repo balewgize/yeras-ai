@@ -124,9 +124,8 @@ class _ModelCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${model.quantization} · ${formatBytes(model.sizeBytes)} · '
-            '${model.contextLength ~/ 1024}K context · '
-            '${model.parameterCountLabel} params',
+            '${formatBytes(model.sizeBytes)} · '
+            '${model.contextLength ~/ 1024}K context',
             style: textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),

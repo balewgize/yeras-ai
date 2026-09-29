@@ -20,7 +20,13 @@ class _InferenceDebugScreenState extends ConsumerState<InferenceDebugScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(inferenceDebugControllerProvider(widget.modelId).notifier).run();
+    // Defer past the first frame: run() updates provider state, which is
+    // illegal synchronously inside initState while the tree is building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(inferenceDebugControllerProvider(widget.modelId).notifier).run();
+      }
+    });
   }
 
   @override

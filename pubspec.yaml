@@ -17,6 +17,7 @@ dependencies:
   llamadart: ^0.9.0
   path_provider: ^2.1.6
   path: ^1.9.1
+  flutter_markdown_plus: ^1.0.12
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +26,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - lib/data/models_catalog.json

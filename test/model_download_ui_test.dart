@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,15 +47,12 @@ class _MidRangeDeviceCapabilityRepository
 }
 
 Future<void> _openModelsScreen(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.settings_outlined));
+  await tester.tap(find.byTooltip('Menu'));
   await tester.pumpAndSettle();
-
-  final modelsTile = find.descendant(
-    of: find.byType(ListTile),
-    matching: find.text('Models'),
-  );
-  await tester.tap(modelsTile);
-  await tester.pumpAndSettle();
+  await tester.tap(find.text('Models'));
+  // The catalog keeps download streams alive, so settle never completes.
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
 }
 
 Widget _app(FakeModelDownloadRepository downloads) => ProviderScope(
@@ -70,6 +68,9 @@ Widget _app(FakeModelDownloadRepository downloads) => ProviderScope(
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // Asset strings are cached in a completed future bound to the zone of
+    // the first test; without clearing, later widget tests never resolve.
+    rootBundle.clear();
   });
 
   testWidgets('download row shows live progress with a cancel control',

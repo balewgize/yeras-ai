@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,15 +70,18 @@ DeviceCapabilities _midRangeCapabilities() => DeviceCapabilities.detect(
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // Asset strings are cached in a completed future bound to the zone of
+    // the first test; without clearing, later widget tests never resolve.
+    rootBundle.clear();
   });
 
   group('catalog contents', () {
-    test('contains a curated 5-8 model list in the 1-4GB range', () async {
+    test('contains a curated model list in the sub-GB to 4GB range', () async {
       final models = await const StaticModelCatalogRepository().models();
 
-      expect(models.length, inInclusiveRange(5, 8));
+      expect(models.length, 9);
       for (final model in models) {
-        expect(model.sizeBytes, greaterThan(500 * 1000 * 1000));
+        expect(model.sizeBytes, greaterThan(300 * 1000 * 1000));
         expect(model.sizeBytes, lessThan(4200 * 1000 * 1000));
         expect(model.downloadUrl, startsWith('https://'));
         expect(model.downloadUrl, endsWith('.gguf'));
@@ -89,7 +93,9 @@ void main() {
       final models = await const StaticModelCatalogRepository().models();
       final names = models.map((model) => model.name).toList();
 
-      expect(names, contains('Qwen2.5 1.5B'));
+      expect(names, contains('Qwen 2.5 0.5B'));
+      expect(names, contains('Qwen 2.5 1.5B'));
+      expect(names, contains('DeepSeek R1 1.5B'));
       expect(names, contains('Gemma 2 2B'));
       expect(names, contains('Phi 3.5 Mini'));
       expect(names, contains('Llama 3.2 1B'));
@@ -107,8 +113,10 @@ void main() {
           model.id: model.fitFor(capabilities),
       };
 
+      expect(fits['qwen2.5-0.5b'], ModelFit.recommended);
       expect(fits['llama-3.2-1b'], ModelFit.recommended);
       expect(fits['qwen2.5-1.5b'], ModelFit.recommended);
+      expect(fits['deepseek-r1-distill-qwen-1.5b'], ModelFit.recommended);
       expect(fits['gemma-2-2b'], ModelFit.willBeSlow);
       expect(fits['qwen2.5-3b'], ModelFit.willBeSlow);
       expect(fits['llama-3.2-3b'], ModelFit.willBeSlow);
@@ -118,7 +126,7 @@ void main() {
       final counts = fits.values.toList();
       expect(
         counts.where((fit) => fit == ModelFit.recommended).length,
-        2,
+        4,
       );
       expect(
         counts.where((fit) => fit == ModelFit.willBeSlow).length,
@@ -185,18 +193,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byTooltip('Menu'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Models'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-    final modelsTile = find.descendant(
-      of: find.byType(ListTile),
-      matching: find.text('Models'),
-    );
-    expect(modelsTile, findsOneWidget);
-    await tester.tap(modelsTile);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Qwen2.5 1.5B'), findsOneWidget);
+    expect(find.text('Qwen 2.5 1.5B'), findsOneWidget);
     expect(find.text('Recommended'), findsWidgets);
     expect(
       find.textContaining('Labels are based on this device'),
@@ -230,11 +233,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('New chat'));
-    await tester.pumpAndSettle();
-
+    final homeScroll = find.descendant(
+      of: find.byType(SingleChildScrollView),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Browse models'),
+      100,
+      scrollable: homeScroll,
+    );
     await tester.tap(find.text('Browse models'));
-    await tester.pumpAndSettle();
+    // The catalog keeps streams alive, so settle is unbounded here.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Models'), findsWidgets);
 
