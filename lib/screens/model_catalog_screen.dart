@@ -5,6 +5,7 @@ import '../models/model_catalog.dart';
 import '../providers/device_capability_providers.dart';
 import '../providers/model_catalog_providers.dart';
 import '../utils/format.dart';
+import '../widgets/model_download_area.dart';
 import '../widgets/section_header.dart';
 
 class ModelCatalogScreen extends ConsumerWidget {
@@ -135,6 +136,8 @@ class _ModelCard extends StatelessWidget {
             model.description,
             style: textTheme.bodySmall?.copyWith(color: scheme.onSurface),
           ),
+          const SizedBox(height: 12),
+          ModelDownloadArea(model: model),
         ],
       ),
     );

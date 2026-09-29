@@ -8,7 +8,10 @@ import 'package:staylocal/data/repositories/model_catalog_repository.dart';
 import 'package:staylocal/models/device_capabilities.dart';
 import 'package:staylocal/models/model_catalog.dart';
 import 'package:staylocal/providers/device_capability_providers.dart';
+import 'package:staylocal/providers/model_download_providers.dart';
 import 'package:staylocal/main.dart';
+
+import 'fakes/fake_model_download_repository.dart';
 
 const int _gb = 1024 * 1024 * 1024;
 
@@ -173,6 +176,9 @@ void main() {
           deviceCapabilityRepositoryProvider.overrideWithValue(
             const _MidRangeDeviceCapabilityRepository(),
           ),
+          modelDownloadRepositoryProvider.overrideWithValue(
+            FakeModelDownloadRepository(),
+          ),
         ],
         child: const StayLocalApp(),
       ),
@@ -214,6 +220,9 @@ void main() {
         overrides: [
           deviceCapabilityRepositoryProvider.overrideWithValue(
             const _MidRangeDeviceCapabilityRepository(),
+          ),
+          modelDownloadRepositoryProvider.overrideWithValue(
+            FakeModelDownloadRepository(),
           ),
         ],
         child: const StayLocalApp(),

@@ -14,6 +14,9 @@ dependencies:
   flutter_riverpod: ^3.3.2
   shared_preferences: ^2.5.5
   device_info_plus: ^13.2.0
+  llamadart: ^0.9.0
+  path_provider: ^2.1.6
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
