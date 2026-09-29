@@ -31,6 +31,50 @@ class MainActivity : FlutterActivity() {
                 result.error("device_capability_error", e.message, null)
             }
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "staylocal/foreground_generation",
+        ).setMethodCallHandler { call, result ->
+            try {
+                when (call.method) {
+                    "startGeneration" -> {
+                        ForegroundGenerationService.start(this)
+                        result.success(null)
+                    }
+                    "stopGeneration" -> {
+                        ForegroundGenerationService.stop(this)
+                        result.success(null)
+                    }
+                    "requestNotificationPermission" -> {
+                        requestNotificationPermissionIfNeeded()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            } catch (e: Exception) {
+                result.error("foreground_generation_error", e.message, null)
+            }
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        // Fire-and-forget: the foreground service runs and protects generation
+        // either way; the permission only controls whether its notification is
+        // visible in the drawer. Never block inference on the answer.
+        requestPermissions(
+            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE,
+        )
+    }
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 4711
     }
 
     private fun getMemoryInfo(): Map<String, Any> {

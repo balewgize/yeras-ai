@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +9,7 @@ import '../models/inference.dart';
 import '../models/model_catalog.dart';
 import '../models/model_download.dart';
 import 'device_capability_providers.dart';
+import 'foreground_generation_providers.dart';
 import 'inference_providers.dart';
 import 'model_catalog_providers.dart';
 import 'model_download_providers.dart';
@@ -133,6 +136,16 @@ class ChatController extends Notifier<ChatState> {
   @override
   ChatState build() => const ChatState();
 
+  /// Android foreground service keeps the process (and generation) alive
+  /// while the app is backgrounded. Held exactly while busy, never longer.
+  void _beginBusyForeground() {
+    unawaited(ref.read(foregroundGenerationProvider).start());
+  }
+
+  void _endBusyForeground() {
+    unawaited(ref.read(foregroundGenerationProvider).stop());
+  }
+
   Future<void> send(String text) async {
     final prompt = text.trim();
     if (prompt.isEmpty || state.isBusy) return;
@@ -204,6 +217,7 @@ class ChatController extends Notifier<ChatState> {
     }
     final turn = ++_generation;
     bool isStale() => turn != _generation;
+    _beginBusyForeground();
     state = state.copyWith(
       stage: ChatStage.loadingModel,
       loadingModelName: model.name,
@@ -233,6 +247,8 @@ class ChatController extends Notifier<ChatState> {
         loadingModelName: null,
         errorMessage: 'Load failed: $error',
       );
+    } finally {
+      _endBusyForeground();
     }
   }
 
@@ -287,6 +303,7 @@ class ChatController extends Notifier<ChatState> {
     final turn = ++_generation;
     final repository = ref.read(inferenceRepositoryProvider);
     bool isStale() => turn != _generation;
+    _beginBusyForeground();
 
     try {
       // Defensive: send()/retry() hard-gate on loadedModelId, so this is
@@ -350,6 +367,8 @@ class ChatController extends Notifier<ChatState> {
           errorMessage: '$error',
         );
       }
+    } finally {
+      _endBusyForeground();
     }
   }
 
@@ -357,6 +376,9 @@ class ChatController extends Notifier<ChatState> {
     if (state.stage != ChatStage.generating) return;
     _generation++;
     ref.read(inferenceRepositoryProvider).cancelGeneration();
+    // Stop the service now rather than waiting for the cancelled stream
+    // to unwind; the finally in _generate is deduped by the running flag.
+    _endBusyForeground();
     state = state.copyWith(stage: ChatStage.idle);
   }
 
@@ -364,6 +386,7 @@ class ChatController extends Notifier<ChatState> {
     _generation++;
     if (state.isBusy) {
       ref.read(inferenceRepositoryProvider).cancelGeneration();
+      _endBusyForeground();
     }
     state = state.copyWith(
       messages: const [],
