@@ -201,4 +201,36 @@ void main() {
       expect(downloads.deletes, contains('llama-3.2-1b'));
     },
   );
+
+  testWidgets('a partial download can be discarded with confirmation',
+    (WidgetTester tester) async {
+      final downloads = FakeModelDownloadRepository();
+      await tester.pumpWidget(_app(downloads));
+      await tester.pumpAndSettle();
+
+      await _openModelsScreen(tester);
+
+      downloads.emit(
+        'llama-3.2-1b',
+        const ModelDownloadState(
+          stage: DownloadStage.notDownloaded,
+          partialBytes: 400000000,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('400 MB of 810 MB'), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Discard partial download?'), findsOneWidget);
+
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+
+      expect(downloads.deletes, contains('llama-3.2-1b'));
+    },
+  );
 }

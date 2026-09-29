@@ -58,41 +58,122 @@ class _CatalogList extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-      itemCount: catalog.entries.length + 1,
-      separatorBuilder: (context, index) {
-        if (index == 0) return const SizedBox(height: 20);
-        return const Divider(height: 1);
-      },
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionHeader('Catalog'),
-              const SizedBox(height: 8),
-              Text(
-                'Labels are based on this device: '
-                '${formatBytes(capabilities.memory.totalBytes)} RAM, '
-                '~${formatBytes(capabilities.conservativeModelBudgetBytes)} '
-                'usable for models. Speed assumes CPU inference.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          );
-        }
-        final entry = catalog.entries[index - 1];
-        return _ModelCard(entry: entry);
-      },
+      children: [
+        const SectionHeader('Catalog'),
+        const SizedBox(height: 8),
+        Text(
+          'Labels are based on this device: '
+          '${formatBytes(capabilities.memory.totalBytes)} RAM, '
+          '~${formatBytes(capabilities.conservativeModelBudgetBytes)} '
+          'usable for models. Speed assumes CPU inference.',
+          style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 20),
+        for (final entry in catalog.entries) _ModelCard(entry: entry),
+      ],
     );
   }
 }
 
-class _ModelCard extends StatelessWidget {
+class _ModelCard extends StatefulWidget {
   const _ModelCard({required this.entry});
+
+  final LabeledCatalogModel entry;
+
+  @override
+  State<_ModelCard> createState() => _ModelCardState();
+}
+
+class _ModelCardState extends State<_ModelCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final entry = widget.entry;
+    final model = entry.model;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      color: scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
+              child: Row(
+                children: [
+                  _ModelGlyph(fit: entry.fit),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          model.name,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${model.parameterCountLabel} · '
+                          '${model.quantization} · '
+                          '${formatBytes(model.sizeBytes)}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _FitIndicator(fit: entry.fit),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    child: Icon(
+                      Icons.expand_more,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: ModelDownloadArea(model: model),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? _ModelDetails(entry: entry)
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelDetails extends StatelessWidget {
+  const _ModelDetails({required this.entry});
 
   final LabeledCatalogModel entry;
 
@@ -102,49 +183,124 @@ class _ModelCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final model = entry.model;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  model.name,
-                  style: textTheme.titleSmall?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _FitBadge(fit: entry.fit),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${formatBytes(model.sizeBytes)} · '
-            '${model.contextLength ~/ 1024}K context',
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 6),
           Text(
             model.description,
             style: textTheme.bodySmall?.copyWith(color: scheme.onSurface),
           ),
           const SizedBox(height: 12),
-          ModelDownloadArea(model: model),
+          _DetailRow(
+            label: 'Parameters',
+            value:
+                '${model.parameterCountLabel} '
+                '(${model.parameterCountInBillions.toStringAsFixed(1)}B)',
+          ),
+          _DetailRow(label: 'Quantization', value: model.quantization),
+          _DetailRow(
+            label: 'Context',
+            value: '${model.contextLength ~/ 1024}K tokens',
+          ),
+          _DetailRow(label: 'File size', value: formatBytes(model.sizeBytes)),
+          _DetailRow(label: 'Min RAM', value: '${model.minRamGb} GB'),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                switch (entry.fit) {
+                  ModelFit.recommended => Icons.check_circle_outline,
+                  ModelFit.willBeSlow => Icons.speed_outlined,
+                  ModelFit.wontFit => Icons.warning_amber_outlined,
+                },
+                size: 16,
+                color: _fitColor(scheme, entry.fit),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _fitExplanation(entry.fit),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: _fitColor(scheme, entry.fit),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _FitBadge extends StatelessWidget {
-  const _FitBadge({required this.fit});
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              label,
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelGlyph extends StatelessWidget {
+  const _ModelGlyph({required this.fit});
+
+  final ModelFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 40,
+      width: 40,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(Icons.memory, size: 20, color: _fitColor(scheme, fit)),
+    );
+  }
+}
+
+class _FitIndicator extends StatelessWidget {
+  const _FitIndicator({required this.fit});
 
   final ModelFit fit;
 
@@ -152,39 +308,46 @@ class _FitBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final (label, background, foreground) = switch (fit) {
-      ModelFit.recommended => (
-          'Recommended',
-          scheme.primary,
-          scheme.onPrimary,
-        ),
-      ModelFit.willBeSlow => (
-          'Will be slow',
-          scheme.surfaceContainerHighest,
-          scheme.onSurfaceVariant,
-        ),
-      ModelFit.wontFit => (
-          "Won't fit",
-          scheme.errorContainer,
-          scheme.onErrorContainer,
-        ),
+    final color = _fitColor(scheme, fit);
+    final label = switch (fit) {
+      ModelFit.recommended => 'Recommended',
+      ModelFit.willBeSlow => 'Will be slow',
+      ModelFit.wontFit => "Won't fit",
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: textTheme.bodySmall?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w600,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 8,
+          width: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-      ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
+
+Color _fitColor(ColorScheme scheme, ModelFit fit) => switch (fit) {
+  ModelFit.recommended => scheme.primary,
+  ModelFit.willBeSlow => scheme.tertiary,
+  ModelFit.wontFit => scheme.error,
+};
+
+String _fitExplanation(ModelFit fit) => switch (fit) {
+  ModelFit.recommended => 'Runs comfortably on this device.',
+  ModelFit.willBeSlow =>
+    'Runs on this device, but responses will be noticeably slower.',
+  ModelFit.wontFit =>
+    'Needs more memory than this device can safely spare. Loading it may crash the app.',
+};
 
 class _CatalogError extends StatelessWidget {
   const _CatalogError({required this.message, required this.onRetry});
@@ -202,7 +365,10 @@ class _CatalogError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Could not load the model catalog', style: textTheme.titleMedium),
+            Text(
+              'Could not load the model catalog',
+              style: textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               message,
