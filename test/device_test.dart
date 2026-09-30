@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:staylocal/data/repositories/device_capability_repository.dart';
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/providers/device_capability_providers.dart';
-import 'package:staylocal/utils/format.dart';
-import 'package:staylocal/main.dart';
-import 'package:staylocal/screens/device_info_screen.dart';
+import 'package:yeras_ai/data/repositories/device_capability_repository.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/providers/device_capability_providers.dart';
+import 'package:yeras_ai/utils/format.dart';
+import 'package:yeras_ai/main.dart';
+import 'package:yeras_ai/screens/device_info_screen.dart';
 
 const int _gb = 1024 * 1024 * 1024;
 
@@ -46,7 +46,9 @@ class _FakeDeviceCapabilityRepository implements DeviceCapabilityRepository {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    });
   });
 
   group('formatBytes', () {
@@ -187,7 +189,7 @@ void main() {
             _FakeDeviceCapabilityRepository(),
           ),
         ],
-        child: const StayLocalApp(),
+        child: const YerasAIApp(),
       ),
     );
     await tester.pumpAndSettle();

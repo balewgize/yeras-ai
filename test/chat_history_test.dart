@@ -6,21 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:staylocal/data/repositories/chat_history_repository.dart';
-import 'package:staylocal/data/repositories/device_capability_repository.dart';
-import 'package:staylocal/data/repositories/model_catalog_repository.dart';
-import 'package:staylocal/main.dart';
-import 'package:staylocal/models/chat.dart';
-import 'package:staylocal/models/conversation.dart';
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/models/model_download.dart';
-import 'package:staylocal/providers/chat_history_providers.dart';
-import 'package:staylocal/providers/device_capability_providers.dart';
-import 'package:staylocal/providers/inference_providers.dart';
-import 'package:staylocal/providers/model_catalog_providers.dart';
-import 'package:staylocal/providers/model_download_providers.dart';
-import 'package:staylocal/screens/home/message_list.dart';
-import 'package:staylocal/utils/format.dart';
+import 'package:yeras_ai/data/repositories/chat_history_repository.dart';
+import 'package:yeras_ai/data/repositories/device_capability_repository.dart';
+import 'package:yeras_ai/data/repositories/model_catalog_repository.dart';
+import 'package:yeras_ai/main.dart';
+import 'package:yeras_ai/models/chat.dart';
+import 'package:yeras_ai/models/conversation.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/models/model_download.dart';
+import 'package:yeras_ai/providers/chat_history_providers.dart';
+import 'package:yeras_ai/providers/device_capability_providers.dart';
+import 'package:yeras_ai/providers/inference_providers.dart';
+import 'package:yeras_ai/providers/model_catalog_providers.dart';
+import 'package:yeras_ai/providers/model_download_providers.dart';
+import 'package:yeras_ai/screens/home/message_list.dart';
+import 'package:yeras_ai/utils/format.dart';
 
 import 'fakes/fake_chat_history_repository.dart';
 import 'fakes/fake_inference_repository.dart';
@@ -116,7 +116,7 @@ Future<void> _pumpApp(
         if (!useRealHistory && history != null)
           chatHistoryRepositoryProvider.overrideWithValue(history),
       ],
-      child: const StayLocalApp(),
+      child: const YerasAIApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -148,18 +148,23 @@ Future<void> _openDrawer(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Taps the per-chat ⋮ menu and picks the [item] entry.
+/// Long-presses the conversation titled [title] and picks the [item] entry
+/// from the bottom sheet.
 Future<void> _chatMenuAction(
   WidgetTester tester,
   String item, {
-  int menuIndex = 0,
+  required String title,
 }) async {
   // Keyboard hygiene for route transitions: popping the menu/dialog while
   // a TextField is focused trips scheduler assertions in tests (the caret
   // timer fires on a detached render object). Real devices are unaffected.
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pump();
-  await tester.tap(find.byTooltip('Chat options').at(menuIndex));
+  final titleInDrawer = find.descendant(
+    of: find.byType(Drawer),
+    matching: find.text(title),
+  );
+  await tester.longPress(titleInDrawer);
   await tester.pumpAndSettle();
   await tester.tap(find.text(item).last);
   await tester.pumpAndSettle();
@@ -175,7 +180,9 @@ Future<void> _killApp(WidgetTester tester) async {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    });
   });
 
   group('conversation model', () {
@@ -507,7 +514,7 @@ void main() {
       await _send(tester, 'Original title');
 
       await _openDrawer(tester);
-      await _chatMenuAction(tester, 'Rename');
+      await _chatMenuAction(tester, 'Rename', title: 'Original title');
       final field = find.descendant(
         of: find.byType(AlertDialog),
         matching: find.byType(TextField),
@@ -554,9 +561,9 @@ void main() {
       await _send(tester, 'Delete me');
       expect(history.all.length, 2);
 
-      // Delete the newest (first ⋮ menu) and confirm.
+      // Delete the newest (long-press its title) and confirm.
       await _openDrawer(tester);
-      await _chatMenuAction(tester, 'Delete');
+      await _chatMenuAction(tester, 'Delete', title: 'Delete me');
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
@@ -590,7 +597,7 @@ void main() {
       await _send(tester, 'Only chat');
 
       await _openDrawer(tester);
-      await _chatMenuAction(tester, 'Delete');
+      await _chatMenuAction(tester, 'Delete', title: 'Only chat');
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),

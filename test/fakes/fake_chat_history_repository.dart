@@ -1,5 +1,5 @@
-import 'package:staylocal/data/repositories/chat_history_repository.dart';
-import 'package:staylocal/models/conversation.dart';
+import 'package:yeras_ai/data/repositories/chat_history_repository.dart';
+import 'package:yeras_ai/models/conversation.dart';
 
 /// In-memory chat history fake mirroring the real repository's
 /// newest-first order and interruption normalization.

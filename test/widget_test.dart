@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:staylocal/data/repositories/device_capability_repository.dart';
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/providers/device_capability_providers.dart';
-import 'package:staylocal/providers/model_download_providers.dart';
+import 'package:yeras_ai/data/repositories/device_capability_repository.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/providers/device_capability_providers.dart';
+import 'package:yeras_ai/providers/model_download_providers.dart';
 
-import 'package:staylocal/main.dart';
+import 'package:yeras_ai/main.dart';
 import 'fakes/fake_model_download_repository.dart';
 
 const int _gb = 1024 * 1024 * 1024;
@@ -41,12 +41,14 @@ class _TestDeviceCapabilityRepository implements DeviceCapabilityRepository {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    });
   });
 
   testWidgets('home has menu, power action, greeting and composer',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StayLocalApp()));
+    await tester.pumpWidget(const ProviderScope(child: YerasAIApp()));
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Menu'), findsOneWidget);
@@ -60,7 +62,7 @@ void main() {
 
   testWidgets('drawer shows new chat, conversations and settings',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StayLocalApp()));
+    await tester.pumpWidget(const ProviderScope(child: YerasAIApp()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Menu'));
@@ -84,7 +86,7 @@ void main() {
             FakeModelDownloadRepository(),
           ),
         ],
-        child: const StayLocalApp(),
+        child: const YerasAIApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -102,7 +104,7 @@ void main() {
 
   testWidgets('theme mode switches from settings via drawer',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: StayLocalApp()));
+    await tester.pumpWidget(const ProviderScope(child: YerasAIApp()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Menu'));
@@ -121,9 +123,10 @@ void main() {
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'theme_mode': 'dark',
+      'onboarding_seen': true,
     });
 
-    await tester.pumpWidget(const ProviderScope(child: StayLocalApp()));
+    await tester.pumpWidget(const ProviderScope(child: YerasAIApp()));
     await tester.pumpAndSettle();
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));

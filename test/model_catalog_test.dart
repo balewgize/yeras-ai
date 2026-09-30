@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:staylocal/data/repositories/device_capability_repository.dart';
-import 'package:staylocal/data/repositories/model_catalog_repository.dart';
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/models/model_catalog.dart';
-import 'package:staylocal/providers/device_capability_providers.dart';
-import 'package:staylocal/providers/model_download_providers.dart';
-import 'package:staylocal/main.dart';
+import 'package:yeras_ai/data/repositories/device_capability_repository.dart';
+import 'package:yeras_ai/data/repositories/model_catalog_repository.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/models/model_catalog.dart';
+import 'package:yeras_ai/providers/device_capability_providers.dart';
+import 'package:yeras_ai/providers/model_download_providers.dart';
+import 'package:yeras_ai/main.dart';
 
 import 'fakes/fake_model_download_repository.dart';
 
@@ -69,7 +69,9 @@ DeviceCapabilities _midRangeCapabilities() => DeviceCapabilities.detect(
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    });
     // Asset strings are cached in a completed future bound to the zone of
     // the first test; without clearing, later widget tests never resolve.
     rootBundle.clear();
@@ -188,7 +190,7 @@ void main() {
             FakeModelDownloadRepository(),
           ),
         ],
-        child: const StayLocalApp(),
+        child: const YerasAIApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -228,7 +230,7 @@ void main() {
             FakeModelDownloadRepository(),
           ),
         ],
-        child: const StayLocalApp(),
+        child: const YerasAIApp(),
       ),
     );
     await tester.pumpAndSettle();

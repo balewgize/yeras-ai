@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/models/inference.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/models/inference.dart';
 
 const int _gb = 1000 * 1000 * 1000;
 

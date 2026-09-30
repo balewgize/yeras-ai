@@ -11,6 +11,7 @@ import '../models/model_catalog.dart';
 import '../models/model_download.dart';
 import 'chat_history_providers.dart';
 import 'device_capability_providers.dart';
+import 'generation_settings_providers.dart';
 import 'inference_providers.dart';
 import 'model_catalog_providers.dart';
 import 'model_download_providers.dart';
@@ -470,6 +471,9 @@ class ChatController extends Notifier<ChatState> {
         ? download.receivedBytes
         : model.sizeBytes;
     final capabilities = await ref.read(deviceCapabilitiesProvider.future);
+    final contextSize = ref.read(
+      generationSettingsProvider.select((settings) => settings.contextSize),
+    );
     await ref
         .read(inferenceRepositoryProvider)
         .loadModel(
@@ -477,12 +481,16 @@ class ChatController extends Notifier<ChatState> {
           filePath: filePath,
           fileBytes: fileBytes,
           capabilities: capabilities,
+          contextSize: contextSize,
         );
   }
 
   Future<void> _generate(CatalogModel model, List<ChatMessage> history) async {
     final turn = ++_generation;
     final repository = ref.read(inferenceRepositoryProvider);
+    final temperature = ref.read(
+      generationSettingsProvider.select((settings) => settings.temperature),
+    );
     bool isStale() => turn != _generation;
     final conversationId = state.activeConversationId;
 
@@ -509,6 +517,7 @@ class ChatController extends Notifier<ChatState> {
 
       final result = await repository.chat(
         history,
+        temperature: temperature,
         onToken: (token) {
           // Tokens arriving after Stop are dropped.
           if (state.stage != ChatStage.generating) return;

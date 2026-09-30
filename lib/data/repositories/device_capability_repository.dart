@@ -17,7 +17,7 @@ class PlatformDeviceCapabilityRepository
   const PlatformDeviceCapabilityRepository();
 
   static const MethodChannel _channel = MethodChannel(
-    'staylocal/device_capability',
+    'yerasai/device_capability',
   );
 
   Future<Map<String, dynamic>> _invoke(String method) async {

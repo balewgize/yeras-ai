@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:staylocal/data/repositories/inference_repository.dart';
-import 'package:staylocal/models/chat.dart';
-import 'package:staylocal/models/inference.dart';
-import 'package:staylocal/models/model_catalog.dart';
-import 'package:staylocal/models/device_capabilities.dart';
+import 'package:yeras_ai/data/repositories/inference_repository.dart';
+import 'package:yeras_ai/models/chat.dart';
+import 'package:yeras_ai/models/inference.dart';
+import 'package:yeras_ai/models/model_catalog.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
 
 /// Scriptable fake for chat + debug inference tests.
 class FakeInferenceRepository implements InferenceRepository {
@@ -19,6 +19,8 @@ class FakeInferenceRepository implements InferenceRepository {
   int stopCalls = 0;
   int unloadCalls = 0;
   String? lastModelId;
+  int? lastContextSize;
+  double? lastTemperature;
   final List<String> generatePrompts = <String>[];
   final List<List<ChatMessage>> chatHistories = <List<ChatMessage>>[];
 
@@ -28,9 +30,11 @@ class FakeInferenceRepository implements InferenceRepository {
     required String filePath,
     required int fileBytes,
     required DeviceCapabilities capabilities,
+    int? contextSize,
   }) async {
     loadCalls++;
     lastModelId = model.id;
+    lastContextSize = contextSize;
     if (loadError != null) throw loadError!;
     return loadedInfo ??
         LoadedModelInfo(
@@ -57,8 +61,10 @@ class FakeInferenceRepository implements InferenceRepository {
   Future<InferenceResult> generate(
     String prompt, {
     required void Function(String token) onToken,
+    double? temperature,
   }) async {
     generatePrompts.add(prompt);
+    lastTemperature = temperature;
     return _replay(onToken);
   }
 
@@ -66,8 +72,10 @@ class FakeInferenceRepository implements InferenceRepository {
   Future<InferenceResult> chat(
     List<ChatMessage> history, {
     required void Function(String token) onToken,
+    double? temperature,
   }) async {
     chatHistories.add(history);
+    lastTemperature = temperature;
     final gate = chatGate;
     if (gate != null) await gate.future;
     if (chatError != null) throw chatError!;

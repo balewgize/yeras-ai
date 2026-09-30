@@ -54,7 +54,7 @@ class ModelLoadButton extends ConsumerWidget {
   }
 }
 
-/// AppBar title: the active model name (or StayLocal when nothing is
+/// AppBar title: the active model name (or YerasAI when nothing is
 /// downloaded). Tapping opens the model picker sheet — the same spot
 /// ChatGPT/Gemini put their model switcher.
 class ModelPickerTitle extends ConsumerWidget {
@@ -86,7 +86,7 @@ class ModelPickerTitle extends ConsumerWidget {
               ),
             Flexible(
               child: Text(
-                active?.name ?? 'StayLocal',
+                active?.name ?? 'YerasAI',
                 overflow: TextOverflow.ellipsis,
               ),
             ),

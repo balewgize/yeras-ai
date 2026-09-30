@@ -1,4 +1,4 @@
-package com.example.staylocal
+package com.example.yerasai
 
 import android.app.ActivityManager
 import android.content.Context
@@ -18,7 +18,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "staylocal/device_capability",
+            "yerasai/device_capability",
         ).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {

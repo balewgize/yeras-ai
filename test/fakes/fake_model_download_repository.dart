@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:staylocal/data/repositories/model_download_repository.dart';
-import 'package:staylocal/models/model_download.dart';
+import 'package:yeras_ai/data/repositories/model_download_repository.dart';
+import 'package:yeras_ai/models/model_download.dart';
 
 class FakeModelDownloadRepository implements ModelDownloadRepository {
   final Map<String, ModelDownloadState> _current =

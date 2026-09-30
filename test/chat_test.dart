@@ -5,17 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:staylocal/data/repositories/device_capability_repository.dart';
-import 'package:staylocal/data/repositories/inference_repository.dart';
-import 'package:staylocal/data/repositories/model_catalog_repository.dart';
-import 'package:staylocal/main.dart';
-import 'package:staylocal/models/device_capabilities.dart';
-import 'package:staylocal/models/inference.dart';
-import 'package:staylocal/models/model_download.dart';
-import 'package:staylocal/providers/device_capability_providers.dart';
-import 'package:staylocal/providers/inference_providers.dart';
-import 'package:staylocal/providers/model_catalog_providers.dart';
-import 'package:staylocal/providers/model_download_providers.dart';
+import 'package:yeras_ai/data/repositories/device_capability_repository.dart';
+import 'package:yeras_ai/data/repositories/inference_repository.dart';
+import 'package:yeras_ai/data/repositories/model_catalog_repository.dart';
+import 'package:yeras_ai/main.dart';
+import 'package:yeras_ai/models/device_capabilities.dart';
+import 'package:yeras_ai/models/inference.dart';
+import 'package:yeras_ai/models/model_download.dart';
+import 'package:yeras_ai/providers/device_capability_providers.dart';
+import 'package:yeras_ai/providers/inference_providers.dart';
+import 'package:yeras_ai/providers/model_catalog_providers.dart';
+import 'package:yeras_ai/providers/model_download_providers.dart';
 
 import 'fakes/fake_inference_repository.dart';
 import 'fakes/fake_model_download_repository.dart';
@@ -106,7 +106,7 @@ Future<void> _pumpApp(
         modelDownloadRepositoryProvider.overrideWithValue(downloads),
         inferenceRepositoryProvider.overrideWithValue(inference),
       ],
-      child: const StayLocalApp(),
+      child: const YerasAIApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -149,7 +149,9 @@ Finder _powerButton(String verb) => find.byWidgetPredicate(
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    });
   });
 
   testWidgets('intentional load gate: load, chat, unload, blocked again',

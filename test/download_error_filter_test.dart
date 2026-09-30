@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:staylocal/utils/download_errors.dart';
+import 'package:yeras_ai/utils/download_errors.dart';
 
 void main() {
   group('transient network errors are silenced', () {

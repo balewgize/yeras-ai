@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:staylocal/utils/download_speed.dart';
+import 'package:yeras_ai/utils/download_speed.dart';
 
 DateTime _at(int millis) =>
     DateTime.fromMillisecondsSinceEpoch(millis, isUtc: true);

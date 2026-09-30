@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/conversation.dart';
 import '../../providers/chat_history_providers.dart';
 import '../../providers/chat_providers.dart';
-import '../../utils/format.dart';
 
 class HomeDrawer extends ConsumerWidget {
   const HomeDrawer({
@@ -23,6 +22,49 @@ class HomeDrawer extends ConsumerWidget {
   final ValueChanged<Conversation> onDeleteConversation;
   final VoidCallback onModels;
   final VoidCallback onSettings;
+
+  void _showConversationOptions(
+    BuildContext context,
+    Conversation conversation,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final scheme = Theme.of(sheetContext).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Rename'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onRenameConversation(conversation);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: scheme.error,
+                ),
+                title: Text(
+                  'Delete',
+                  style: TextStyle(color: scheme.error),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onDeleteConversation(conversation);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +86,7 @@ class HomeDrawer extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    'StayLocal',
+                    'YerasAI',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -102,42 +144,20 @@ class HomeDrawer extends ConsumerWidget {
                       itemCount: conversations.length,
                       itemBuilder: (context, index) {
                         final conversation = conversations[index];
+                        final isActive = conversation.id == activeId;
                         return ListTile(
                           title: Text(
                             conversation.displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: isActive
+                                ? const TextStyle(fontWeight: FontWeight.w600)
+                                : null,
                           ),
-                          subtitle: Text(
-                            formatRelativeTime(conversation.updatedAt),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          selected: conversation.id == activeId,
-                          selectedTileColor: scheme.secondaryContainer,
+                          selected: isActive,
                           onTap: () => onOpenConversation(conversation.id),
-                          trailing: PopupMenuButton<String>(
-                            tooltip: 'Chat options',
-                            icon: const Icon(Icons.more_vert, size: 20),
-                            onSelected: (value) {
-                              if (value == 'rename') {
-                                onRenameConversation(conversation);
-                              } else if (value == 'delete') {
-                                onDeleteConversation(conversation);
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'rename',
-                                child: Text('Rename'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
-                            ],
-                          ),
+                          onLongPress: () =>
+                              _showConversationOptions(context, conversation),
                         );
                       },
                     ),

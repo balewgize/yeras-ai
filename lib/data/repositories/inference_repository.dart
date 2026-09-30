@@ -15,16 +15,22 @@ class ModelTooLargeException implements Exception {
 }
 
 abstract class InferenceRepository {
+  /// [contextSize] sizes the KV cache (n_ctx) at load. Null keeps the
+  /// repository default (mirrored by the Phase 8 settings provider).
   Future<LoadedModelInfo> loadModel({
     required CatalogModel model,
     required String filePath,
     required int fileBytes,
     required DeviceCapabilities capabilities,
+    int? contextSize,
   });
 
+  /// [temperature] overrides sampling randomness for this call. Null keeps
+  /// the repository default (mirrored by the Phase 8 settings provider).
   Future<InferenceResult> generate(
     String prompt, {
     required void Function(String token) onToken,
+    double? temperature,
   });
 
   /// Multi-turn chat: the full [history] is passed to the engine so the
@@ -32,6 +38,7 @@ abstract class InferenceRepository {
   Future<InferenceResult> chat(
     List<ChatMessage> history, {
     required void Function(String token) onToken,
+    double? temperature,
   });
 
   void cancelGeneration();
@@ -49,7 +56,12 @@ class LlamadartInferenceRepository implements InferenceRepository {
 
   /// Context window for chat. Deliberately small: the KV cache grows with
   /// n_ctx, so this bounds RAM on top of the memory-mapped weights.
+  /// The Phase 8 settings panel may override this per load.
   static const int chatContextSize = 2048;
+
+  /// Default sampling temperature. The Phase 8 settings panel may override
+  /// this per generation.
+  static const double defaultTemperature = 0.8;
 
   /// Cap on reply length per turn. Bounds generation time and memory.
   static const int chatMaxTokens = 512;
@@ -57,16 +69,16 @@ class LlamadartInferenceRepository implements InferenceRepository {
   LlamaEngine? _engine;
   bool _loaded = false;
 
-  /// Loads [filePath] without pulling the whole file into RAM:
+  /// Memory-mapped load params, sized by the requested context window:
   /// - `useMmap: true` memory-maps the weights so pages stream in on
   ///   demand and the OS can evict them under pressure.
   /// - `useMlock: false` never pins weights in RAM.
   /// - Oversized files are refused up front via [ramRefusalReason].
-  static const ModelParams _loadParams = ModelParams(
-    contextSize: chatContextSize,
-    useMmap: true,
-    useMlock: false,
-  );
+  static ModelParams _loadParams(int contextSize) => ModelParams(
+        contextSize: contextSize,
+        useMmap: true,
+        useMlock: false,
+      );
 
   @override
   Future<LoadedModelInfo> loadModel({
@@ -74,6 +86,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
     required String filePath,
     required int fileBytes,
     required DeviceCapabilities capabilities,
+    int? contextSize,
   }) async {
     final refusal = ramRefusalReason(
       modelName: model.name,
@@ -82,10 +95,14 @@ class LlamadartInferenceRepository implements InferenceRepository {
     );
     if (refusal != null) throw ModelTooLargeException(refusal);
     await unload();
+    final effectiveContext = contextSize ?? chatContextSize;
     final engine = LlamaEngine(LlamaBackend());
     try {
       // _loadParams keeps weights memory-mapped, never fully resident.
-      await engine.loadModel(filePath, modelParams: _loadParams);
+      await engine.loadModel(
+        filePath,
+        modelParams: _loadParams(effectiveContext),
+      );
     } catch (_) {
       await engine.dispose();
       rethrow;
@@ -97,7 +114,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
       filePath: filePath,
       fileBytes: fileBytes,
       acceleratorLabel: engineAcceleratorLabel(capabilities),
-      contextSize: chatContextSize,
+      contextSize: effectiveContext,
     );
   }
 
@@ -105,10 +122,12 @@ class LlamadartInferenceRepository implements InferenceRepository {
   Future<InferenceResult> generate(
     String prompt, {
     required void Function(String token) onToken,
+    double? temperature,
   }) {
     return _stream(
       [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
       maxTokens: debugMaxTokens,
+      temperature: temperature ?? defaultTemperature,
       onToken: onToken,
     );
   }
@@ -117,6 +136,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
   Future<InferenceResult> chat(
     List<ChatMessage> history, {
     required void Function(String token) onToken,
+    double? temperature,
   }) {
     return _stream(
       [
@@ -130,6 +150,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
           ),
       ],
       maxTokens: chatMaxTokens,
+      temperature: temperature ?? defaultTemperature,
       onToken: onToken,
     );
   }
@@ -137,6 +158,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
   Future<InferenceResult> _stream(
     List<LlamaChatMessage> messages, {
     required int maxTokens,
+    required double temperature,
     required void Function(String token) onToken,
   }) async {
     final engine = _engine;
@@ -149,7 +171,7 @@ class LlamadartInferenceRepository implements InferenceRepository {
     Duration? backendDuration;
     await for (final chunk in engine.create(
       messages,
-      params: GenerationParams(maxTokens: maxTokens),
+      params: GenerationParams(maxTokens: maxTokens, temp: temperature),
     )) {
       if (chunk.choices.isEmpty) continue;
       final text = chunk.choices.first.delta.content;
