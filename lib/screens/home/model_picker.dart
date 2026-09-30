@@ -33,8 +33,8 @@ class ModelLoadButton extends ConsumerWidget {
       tooltip: active == null
           ? 'No model downloaded'
           : loaded
-              ? 'Unload ${active.name} - free memory'
-              : 'Load ${active.name} into memory',
+          ? 'Unload ${active.name} - free memory'
+          : 'Load ${active.name} into memory',
       onPressed: active == null || busy
           ? null
           : () {
@@ -112,9 +112,6 @@ class ModelPickerSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final downloaded = ref.watch(downloadedModelsProvider);
     final selectedId = ref.watch(selectedModelIdProvider);
-    final loadedId = ref.watch(
-      chatControllerProvider.select((chat) => chat.loadedModelId),
-    );
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
@@ -150,18 +147,18 @@ class ModelPickerSheet extends ConsumerWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    for (final model in downloaded)
-                      ListTile(
-                        title: Text(model.name),
-                        subtitle: Text(
-                          '${formatBytes(model.sizeBytes)} · '
-                          '${model.contextLength ~/ 1024}K context · '
-                          '${model.id == loadedId ? 'Loaded' : 'Not loaded'}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
+                      for (final model in downloaded)
+                        ListTile(
+                          title: Text(model.name),
+                          subtitle: Text(
+                            '${formatBytes(model.sizeBytes)} · '
+                            '${model.contextLength ~/ 1024}K context',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                        trailing: selectedId == model.id ||
+                        trailing:
+                            selectedId == model.id ||
                                 (selectedId == null &&
                                     model == downloaded.first)
                             ? Icon(Icons.check, color: scheme.primary)
@@ -180,8 +177,7 @@ class ModelPickerSheet extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: FilledButton.tonalIcon(
                 onPressed: onBrowse,
-                icon: const Icon(Icons.download_outlined, size: 18),
-                label: const Text('Browse more models'),
+                label: const Text('View all models'),
               ),
             ),
           ],

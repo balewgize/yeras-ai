@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/model_catalog.dart';
 import '../models/model_download.dart';
 import '../providers/model_download_providers.dart';
-import '../screens/inference_debug_screen.dart';
 import '../utils/format.dart';
 
 class ModelDownloadArea extends ConsumerWidget {
@@ -46,7 +45,7 @@ class _DownloadAreaContent extends ConsumerWidget {
       return Row(
         children: [
           const Spacer(),
-          FilledButton.tonalIcon(
+          FilledButton.icon(
             onPressed: () => repository.start(model.id),
             icon: const Icon(Icons.download_outlined),
             label: const Text('Download'),
@@ -60,6 +59,7 @@ class _DownloadAreaContent extends ConsumerWidget {
         model: model,
         state: state,
         onResume: () => repository.start(model.id),
+        onDelete: () => repository.delete(model.id),
       );
     }
     if (state.stage == DownloadStage.ready) {
@@ -106,15 +106,18 @@ class _ResumableArea extends StatelessWidget {
     required this.model,
     required this.state,
     required this.onResume,
+    required this.onDelete,
   });
 
   final CatalogModel model;
   final ModelDownloadState state;
   final VoidCallback onResume;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final done = state.partialBytes > 0
         ? state.partialBytes
         : state.receivedBytes;
@@ -127,9 +130,7 @@ class _ResumableArea extends StatelessWidget {
         if (state.errorMessage != null) ...[
           Text(
             state.errorMessage!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.error,
-            ),
+            style: textTheme.bodySmall?.copyWith(color: scheme.error),
           ),
           const SizedBox(height: 8),
         ],
@@ -140,11 +141,18 @@ class _ResumableArea extends StatelessWidget {
                 hasProgress
                     ? '${formatBytes(done)} of ${formatBytes(total)}'
                     : 'Not started',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
+            if (hasProgress)
+              IconButton(
+                tooltip: 'Delete partial download',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _confirmDelete(context, partial: true),
+              ),
             FilledButton.tonalIcon(
               onPressed: onResume,
               icon: const Icon(Icons.play_arrow),
@@ -165,6 +173,22 @@ class _ResumableArea extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context, {
+    required bool partial,
+  }) async {
+    final done = state.partialBytes > 0
+        ? state.partialBytes
+        : state.receivedBytes;
+    final confirmed = await showDeleteModelDialog(
+      context,
+      modelName: model.name,
+      partial: partial,
+      partialBytes: done,
+    );
+    if (confirmed) await onDelete();
   }
 }
 
@@ -257,48 +281,59 @@ class _ReadyRow extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => InferenceDebugScreen(modelId: model.id),
-            ),
-          ),
-          child: const Text('Test'),
-        ),
         IconButton(
           tooltip: 'Delete model',
+          visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.delete_outline),
-          onPressed: () => _confirmDelete(context),
+          onPressed: () async {
+            final confirmed = await showDeleteModelDialog(
+              context,
+              modelName: model.name,
+              partial: false,
+            );
+            if (confirmed) await onDelete();
+          },
         ),
       ],
     );
   }
+}
 
-  Future<void> _confirmDelete(BuildContext context) async {
-    final scheme = Theme.of(context).colorScheme;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${model.name}?'),
-        content: const Text(
-          'The downloaded model file will be removed from this device. '
-          'You can download it again later.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: scheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
+/// Shared destructive confirmation for removing a downloaded or partially
+/// downloaded model. Returns true only when the user confirms.
+Future<bool> showDeleteModelDialog(
+  BuildContext context, {
+  required String modelName,
+  required bool partial,
+  int partialBytes = 0,
+}) async {
+  final scheme = Theme.of(context).colorScheme;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        partial ? 'Discard partial download?' : 'Delete $modelName?',
       ),
-    );
-    if (confirmed ?? false) {
-      await onDelete();
-    }
-  }
+      content: Text(
+        partial
+            ? 'The ${partialBytes > 0 ? formatBytes(partialBytes) : 'partially downloaded data'} '
+                  'will be removed from this device. You will need to start '
+                  'over next time.'
+            : 'The downloaded model file will be removed from this device. '
+                  'You can download it again later.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: scheme.error),
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(partial ? 'Discard' : 'Delete'),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
 }

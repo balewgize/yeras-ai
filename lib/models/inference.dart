@@ -1,8 +1,6 @@
 import 'device_capabilities.dart';
 import '../utils/format.dart';
 
-enum InferenceStage { idle, loading, generating, done, error }
-
 class LoadedModelInfo {
   const LoadedModelInfo({
     required this.modelName,
@@ -29,42 +27,6 @@ class InferenceResult {
   final String text;
   final int completionTokens;
   final double? tokensPerSecond;
-}
-
-class InferenceDebugState {
-  const InferenceDebugState({
-    this.stage = InferenceStage.idle,
-    this.output = '',
-    this.errorMessage,
-    this.model,
-    this.tokensPerSecond,
-    this.completionTokens,
-  });
-
-  final InferenceStage stage;
-  final String output;
-  final String? errorMessage;
-  final LoadedModelInfo? model;
-  final double? tokensPerSecond;
-  final int? completionTokens;
-
-  InferenceDebugState copyWith({
-    InferenceStage? stage,
-    String? output,
-    String? errorMessage,
-    LoadedModelInfo? model,
-    double? tokensPerSecond,
-    int? completionTokens,
-  }) {
-    return InferenceDebugState(
-      stage: stage ?? this.stage,
-      output: output ?? this.output,
-      errorMessage: errorMessage,
-      model: model ?? this.model,
-      tokensPerSecond: tokensPerSecond,
-      completionTokens: completionTokens,
-    );
-  }
 }
 
 String? ramRefusalReason({

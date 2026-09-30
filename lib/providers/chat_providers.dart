@@ -11,7 +11,6 @@ import '../models/model_catalog.dart';
 import '../models/model_download.dart';
 import 'chat_history_providers.dart';
 import 'device_capability_providers.dart';
-import 'foreground_generation_providers.dart';
 import 'inference_providers.dart';
 import 'model_catalog_providers.dart';
 import 'model_download_providers.dart';
@@ -172,16 +171,6 @@ class ChatController extends Notifier<ChatState> {
   ChatState build() {
     _restoreLastActiveConversation();
     return const ChatState();
-  }
-
-  /// Android foreground service keeps the process (and generation) alive
-  /// while the app is backgrounded. Held exactly while busy, never longer.
-  void _beginBusyForeground() {
-    unawaited(ref.read(foregroundGenerationProvider).start());
-  }
-
-  void _endBusyForeground() {
-    unawaited(ref.read(foregroundGenerationProvider).stop());
   }
 
   /// Reopens the conversation active at last shutdown (or the one killed
@@ -383,7 +372,6 @@ class ChatController extends Notifier<ChatState> {
     _generation++;
     if (state.isBusy) {
       ref.read(inferenceRepositoryProvider).cancelGeneration();
-      _endBusyForeground();
     }
     _active = null;
     unawaited(_clearLastActiveConversationId());
@@ -413,7 +401,6 @@ class ChatController extends Notifier<ChatState> {
     }
     final turn = ++_generation;
     bool isStale() => turn != _generation;
-    _beginBusyForeground();
     state = state.copyWith(
       stage: ChatStage.loadingModel,
       loadingModelName: model.name,
@@ -443,8 +430,6 @@ class ChatController extends Notifier<ChatState> {
         loadingModelName: null,
         errorMessage: 'Load failed: $error',
       );
-    } finally {
-      _endBusyForeground();
     }
   }
 
@@ -499,7 +484,6 @@ class ChatController extends Notifier<ChatState> {
     final turn = ++_generation;
     final repository = ref.read(inferenceRepositoryProvider);
     bool isStale() => turn != _generation;
-    _beginBusyForeground();
     final conversationId = state.activeConversationId;
 
     try {
@@ -587,8 +571,6 @@ class ChatController extends Notifier<ChatState> {
           );
         }
       }
-    } finally {
-      _endBusyForeground();
     }
     // Persist the finished/failed reply — but only if this generation
     // still owns the active conversation (a switch/newChat/delete since
@@ -602,9 +584,6 @@ class ChatController extends Notifier<ChatState> {
     if (state.stage != ChatStage.generating) return;
     _generation++;
     ref.read(inferenceRepositoryProvider).cancelGeneration();
-    // Stop the service now rather than waiting for the cancelled stream
-    // to unwind; the finally in _generate is deduped by the running flag.
-    _endBusyForeground();
     // The stopped-early reply persists when the cancelled stream unwinds.
     state = state.copyWith(stage: ChatStage.idle);
   }
@@ -615,7 +594,6 @@ class ChatController extends Notifier<ChatState> {
     final detachedMessages = state.messages;
     if (state.isBusy) {
       ref.read(inferenceRepositoryProvider).cancelGeneration();
-      _endBusyForeground();
     }
     _active = null;
     if (detached != null &&
