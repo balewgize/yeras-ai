@@ -12,6 +12,14 @@ Flutter app that runs open-source LLMs **fully on-device**. No cloud, no account
 - Saved chats with rename, delete, and resume
 - Theme, temperature / context settings, onboarding
 
+## Screenshot
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/14e07ba7-bbd1-4081-bdde-367b377bc119" width="45%" />
+  &nbsp; &nbsp; &nbsp; &nbsp;
+  <img src="https://github.com/user-attachments/assets/5547bfec-82bc-4b93-89f2-299813869053" width="45%" />
+</p>
+
+
 ## Tech stack
 
 - **Flutter + Dart** (Material 3, minimal Claude/ChatGPT-style UI)
