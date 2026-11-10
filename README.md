@@ -10,6 +10,7 @@ Flutter app that runs open-source LLMs **fully on-device**. No cloud, no account
 - RAM, storage, and accelerator info
 - Refuses oversized models instead of crashing
 - Saved chats with rename, delete, and resume
+- Auto-trims old messages when context fills
 - Theme, temperature / context settings, onboarding
 
 ## Screenshot
