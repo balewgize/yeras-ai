@@ -12,13 +12,11 @@ class StatusArea extends ConsumerWidget {
     super.key,
     required this.onRetry,
     required this.onBrowse,
-    required this.onNewChat,
     required this.onLoad,
   });
 
   final VoidCallback onRetry;
   final VoidCallback onBrowse;
-  final VoidCallback onNewChat;
   final VoidCallback onLoad;
 
   @override
@@ -75,12 +73,7 @@ class StatusArea extends ConsumerWidget {
             ),
             // Keep legacy escape hatches discoverable alongside the
             // intentional top-bar load flow.
-            if (chat.contextFull)
-              TextButton(
-                onPressed: onNewChat,
-                child: const Text('New chat'),
-              )
-            else if (!hasModel)
+            if (!hasModel)
               TextButton(
                 onPressed: onBrowse,
                 child: const Text('Browse models'),

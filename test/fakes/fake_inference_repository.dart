@@ -11,6 +11,7 @@ class FakeInferenceRepository implements InferenceRepository {
   LoadedModelInfo? loadedInfo;
   Object? loadError;
   Object? chatError;
+  int failChatWhenLongerThan = -1;
   Completer<void>? chatGate;
   List<String> tokenScript = const <String>[];
   InferenceResult? scriptResult;
@@ -78,7 +79,11 @@ class FakeInferenceRepository implements InferenceRepository {
     lastTemperature = temperature;
     final gate = chatGate;
     if (gate != null) await gate.future;
-    if (chatError != null) throw chatError!;
+    if (chatError != null &&
+        (failChatWhenLongerThan < 0 ||
+            history.length > failChatWhenLongerThan)) {
+      throw chatError!;
+    }
     return _replay(onToken);
   }
 

@@ -88,7 +88,6 @@ class ChatState {
     this.activeConversationId,
     this.errorMessage,
     this.infoMessage,
-    this.contextFull = false,
     this.wasInterrupted = false,
   });
 
@@ -101,7 +100,6 @@ class ChatState {
   final String? activeConversationId;
   final String? errorMessage;
   final String? infoMessage;
-  final bool contextFull;
 
   /// True when the last reply never finished because the app died
   /// mid-generation; cleared by the next send.
@@ -120,7 +118,6 @@ class ChatState {
     bool clearLoadedModel = false,
     String? errorMessage,
     String? infoMessage,
-    bool? contextFull,
     bool? wasInterrupted,
   }) {
     return ChatState(
@@ -134,7 +131,6 @@ class ChatState {
           : (activeConversationId ?? this.activeConversationId),
       errorMessage: errorMessage,
       infoMessage: infoMessage,
-      contextFull: contextFull ?? false,
       wasInterrupted: wasInterrupted ?? false,
     );
   }
@@ -485,6 +481,15 @@ class ChatController extends Notifier<ChatState> {
         );
   }
 
+  /// Drops the oldest messages so a context-full retry can fit.
+  /// Never drops the last message (the current prompt). Returns the
+  /// same list when there is nothing left to trim.
+  static List<ChatMessage> _trimOldest(List<ChatMessage> history) {
+    if (history.length <= 1) return history;
+    final drop = (history.length ~/ 3).clamp(1, history.length - 1);
+    return history.sublist(drop);
+  }
+
   Future<void> _generate(CatalogModel model, List<ChatMessage> history) async {
     final turn = ++_generation;
     final repository = ref.read(inferenceRepositoryProvider);
@@ -515,38 +520,68 @@ class ChatController extends Notifier<ChatState> {
       // first token still restores as an interrupted reply.
       await _persistActiveConversation(generating: true, interrupted: false);
 
-      final result = await repository.chat(
-        history,
-        temperature: temperature,
-        onToken: (token) {
-          // Tokens arriving after Stop are dropped.
-          if (state.stage != ChatStage.generating) return;
+      void onToken(String token) {
+        // Tokens arriving after Stop are dropped.
+        if (state.stage != ChatStage.generating) return;
+        final messages = [...state.messages];
+        if (messages.isNotEmpty &&
+            messages.last.role == ChatRole.assistant) {
+          messages[messages.length - 1] = messages.last.appending(token);
+          state = state.copyWith(
+            stage: ChatStage.generating,
+            messages: messages,
+          );
+          _tokensSinceFlush++;
+          final now = DateTime.now();
+          if (_tokensSinceFlush >= _streamFlushTokens ||
+              now.difference(_lastStreamFlush!) >= _streamFlushInterval) {
+            _tokensSinceFlush = 0;
+            _lastStreamFlush = now;
+            // Streamed text survives a force-close mid-reply; throttled
+            // so storage isn't rewritten on every token.
+            unawaited(
+              _persistActiveConversation(
+                generating: true,
+                interrupted: false,
+              ),
+            );
+          }
+        }
+      }
+
+      // Sliding window: on context-full, cut oldest messages and retry.
+      // The full UI history is kept; only what is sent to the engine
+      // shrinks. Single-message overflow still errors clearly.
+      var attemptHistory = history;
+      var trimmed = false;
+      InferenceResult? result;
+      while (true) {
+        try {
+          result = await repository.chat(
+            attemptHistory,
+            temperature: temperature,
+            onToken: onToken,
+          );
+          break;
+        } catch (error) {
+          if (!isContextFullError(error)) rethrow;
+          final next = _trimOldest(attemptHistory);
+          if (next.length == attemptHistory.length) rethrow;
+          attemptHistory = next;
+          trimmed = true;
+          // Clear any partial reply before retrying with less context.
           final messages = [...state.messages];
           if (messages.isNotEmpty &&
               messages.last.role == ChatRole.assistant) {
-            messages[messages.length - 1] = messages.last.appending(token);
+            messages[messages.length - 1] =
+                const ChatMessage(role: ChatRole.assistant, text: '');
             state = state.copyWith(
               stage: ChatStage.generating,
               messages: messages,
             );
-            _tokensSinceFlush++;
-            final now = DateTime.now();
-            if (_tokensSinceFlush >= _streamFlushTokens ||
-                now.difference(_lastStreamFlush!) >= _streamFlushInterval) {
-              _tokensSinceFlush = 0;
-              _lastStreamFlush = now;
-              // Streamed text survives a force-close mid-reply; throttled
-              // so storage isn't rewritten on every token.
-              unawaited(
-                _persistActiveConversation(
-                  generating: true,
-                  interrupted: false,
-                ),
-              );
-            }
           }
-        },
-      );
+        }
+      }
       final messages = [...state.messages];
       if (!isStale()) {
         if (messages.isNotEmpty &&
@@ -554,7 +589,11 @@ class ChatController extends Notifier<ChatState> {
           messages[messages.length - 1] =
               messages.last.withRate(result.tokensPerSecond);
         }
-        state = state.copyWith(stage: ChatStage.idle, messages: messages);
+        state = state.copyWith(
+          stage: ChatStage.idle,
+          messages: messages,
+          infoMessage: trimmed ? 'Older messages trimmed to fit.' : null,
+        );
       }
     } on ModelTooLargeException catch (error) {
       if (!isStale()) {
@@ -568,10 +607,8 @@ class ChatController extends Notifier<ChatState> {
         if (isContextFullError(error)) {
           state = state.copyWith(
             stage: ChatStage.idle,
-            contextFull: true,
-            errorMessage:
-                'This conversation outgrew the model context window. '
-                'Start a new chat to continue.',
+            errorMessage: 'Message too long for the model context. '
+                'Shorten it or start a new chat.',
           );
         } else {
           state = state.copyWith(

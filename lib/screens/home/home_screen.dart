@@ -296,8 +296,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onRetry: () =>
                   ref.read(chatControllerProvider.notifier).retry(),
               onBrowse: _openModels,
-              onNewChat: () =>
-                  ref.read(chatControllerProvider.notifier).newChat(),
               onLoad: () {
                 HapticFeedback.lightImpact();
                 ref.read(chatControllerProvider.notifier).loadActiveModel();

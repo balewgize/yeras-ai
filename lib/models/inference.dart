@@ -54,8 +54,7 @@ String engineAcceleratorLabel(DeviceCapabilities capabilities) {
 
 /// True when [error] looks like the conversation outgrew the model's
 /// context window (KV cache full), as opposed to a load/generation bug.
-/// Callers surface a clear "context full — start a new chat" state instead
-/// of stalling or cutting off silently.
+/// Callers auto-trim oldest messages and retry instead of blocking the user.
 bool isContextFullError(Object error) {
   final message = '$error'.toLowerCase();
   return message.contains('n_ctx') ||

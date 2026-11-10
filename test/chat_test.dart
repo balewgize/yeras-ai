@@ -270,7 +270,41 @@ void main() {
     expect(find.byTooltip('Send'), findsOneWidget);
   });
 
-  testWidgets('context-full error offers starting a new chat',
+  testWidgets('context-full trims oldest messages and retries',
+      (WidgetTester tester) async {
+    final downloads = FakeModelDownloadRepository();
+    final inference = FakeInferenceRepository()
+      ..chatError = StateError('prompt too long for n_ctx, KV cache full')
+      ..failChatWhenLongerThan = 2
+      ..tokenScript = const <String>['trimmed ', 'reply']
+      ..scriptResult = const InferenceResult(
+        text: 'trimmed reply',
+        completionTokens: 2,
+      );
+    await _pumpApp(tester, downloads: downloads, inference: inference);
+    downloads.emit('llama-3.2-1b', _ready('/cache/model.gguf', 808000000));
+    await tester.pumpAndSettle();
+    await tester.tap(_powerButton('Load'));
+    await tester.pumpAndSettle();
+
+    // Build a 3-message history: two sends succeed only after
+    // failChatWhenLongerThan is bypassed for the first one.
+    inference.failChatWhenLongerThan = 99;
+    await _send(tester, 'First');
+    await _send(tester, 'Second');
+    expect(find.text('trimmed reply'), findsWidgets);
+
+    // Long history now triggers context-full: oldest cut, retry succeeds,
+    // full UI history kept, trim notice shown.
+    inference.failChatWhenLongerThan = 2;
+    await _send(tester, 'Third');
+    expect(find.text('trimmed reply'), findsWidgets);
+    expect(find.textContaining('trimmed to fit'), findsOneWidget);
+    expect(find.text('First'), findsOneWidget);
+    expect(inference.chatHistories.last.length, lessThan(4));
+  });
+
+  testWidgets('single overlong message errors clearly',
       (WidgetTester tester) async {
     final downloads = FakeModelDownloadRepository();
     final inference = FakeInferenceRepository()
@@ -282,11 +316,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await _send(tester, 'Hello');
-    expect(find.textContaining('outgrew'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(TextButton, 'New chat'));
-    await tester.pumpAndSettle();
-    expect(find.text('Hello'), findsNothing);
-    expect(find.textContaining('outgrew'), findsNothing);
+    expect(find.textContaining('too long'), findsOneWidget);
   });
 }
