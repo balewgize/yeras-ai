@@ -15,9 +15,9 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let registrar = engineBridge.pluginRegistry.registrar(
-      forPlugin: "staylocal/device_capability")
+      forPlugin: "yerasai/device_capability")
     let channel = FlutterMethodChannel(
-      name: "staylocal/device_capability", binaryMessenger: registrar.messenger())
+      name: "yerasai/device_capability", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { call, result in
       switch call.method {
       case "getMemoryInfo":
