@@ -1,4 +1,4 @@
-package com.example.yerasai
+package com.addislab.yerasai
 
 import android.app.ActivityManager
 import android.content.Context

@@ -23,6 +23,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# Only the GGUF/llama.cpp runtime is used by the v1 catalog. Bundling the
+# optional LiteRT-LM runtime would add ~130 MB of unused native libraries.
+hooks:
+  user_defines:
+    llamadart:
+      llamadart_native_runtimes: llama_cpp
 
 flutter:
   uses-material-design: true

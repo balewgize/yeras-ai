@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YerasAI Privacy Policy</title>
+  <meta name="description" content="YerasAI privacy policy: an offline AI chat app that collects no personal data.">
+  <style>
+    :root {
+      --accent: #2563eb;
+      --bg: #fafafb;
+      --surface: #ffffff;
+      --text: #18181b;
+      --muted: #52525b;
+      --border: #e4e4e7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101011;
+        --surface: #171718;
+        --text: #f4f4f5;
+        --muted: #a1a1aa;
+        --border: #27272a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 56px 24px 96px;
+    }
+    .mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      background: var(--accent);
+      display: grid;
+      place-items: center;
+      margin-bottom: 32px;
+    }
+    .mark svg { width: 26px; height: 26px; }
+    h1 {
+      font-size: 34px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    .updated {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 40px;
+    }
+    h2 {
+      font-size: 20px;
+      letter-spacing: -0.01em;
+      margin: 40px 0 10px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    p, li { color: var(--text); font-size: 16px; }
+    li { margin: 6px 0; }
+    strong { font-weight: 650; }
+    a { color: var(--accent); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="mark" aria-hidden="true">
+    <svg viewBox="0 0 32 32" fill="none">
+      <path d="M8 8l8 8 8-8M16 16v9" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <h1>YerasAI Privacy Policy</h1>
+  <p class="updated">Last updated: November 10, 2026</p>
+
+  <div class="card">
+    <p><strong>The short version:</strong> YerasAI collects no personal data. Your
+    chats and settings stay on your phone. There is no account, no cloud backend,
+    no analytics, and no ads.</p>
+  </div>
+
+  <p>YerasAI (“the app”, “we”, “us”) is an offline AI chat app for Android developed
+  by Addiss Lab. This policy explains what the app does with your information.</p>
+
+  <h2>1. No account, no analytics, no ads</h2>
+  <p>YerasAI has no sign-up, no login, no user profile, and no cloud backend. It does
+  not include analytics, advertising, crash-reporting, or tracking SDKs. We do not
+  receive your conversations, device identifiers, location, contacts, or usage
+  statistics.</p>
+
+  <h2>2. Data stored on your device</h2>
+  <p>The app stores the following only in its private app storage on your device:</p>
+  <ul>
+    <li>chat conversations and messages you create;</li>
+    <li>app settings (theme, temperature, context length, onboarding state);</li>
+    <li>downloaded model files and download metadata.</li>
+  </ul>
+  <p>This data is not transmitted to us or to any third party by the app. You can
+  delete individual conversations in the app, and uninstalling the app removes all
+  of it. Android cloud backup is disabled for YerasAI, so this data is not copied
+  to Google’s backup service.</p>
+
+  <h2>3. Model downloads</h2>
+  <p>To chat, you download an open-source model file. The app requests that file
+  directly from Hugging Face (<a href="https://huggingface.co" rel="noopener">huggingface.co</a>)
+  over HTTPS. As with any web request, Hugging Face may receive technical
+  information such as your IP address and user agent as part of serving the
+  download. That request goes to Hugging Face, not to us, and is governed by
+  Hugging Face’s own privacy policy. The downloaded model stays on your device.</p>
+  <p>After a model is installed, the app works without a network connection. The app
+  requests only the <code>INTERNET</code> Android permission, and uses it solely for
+  model downloads.</p>
+
+  <h2>4. AI-generated content</h2>
+  <p>Responses are generated locally by the model on your device. Your prompts and
+  the generated text are not sent to us or to the model’s original publisher. The
+  app does not train, fine-tune, or upload anything based on your conversations.</p>
+
+  <h2>5. Children</h2>
+  <p>YerasAI is not directed to children under 13. Because the app collects no
+  personal data, it does not knowingly collect personal information from children.</p>
+
+  <h2>6. Security</h2>
+  <p>Your chats and settings live in the app’s sandboxed private storage, protected
+  by the Android operating system. Network requests for model downloads use HTTPS.
+  No method of storage is perfectly secure, but the app is designed to keep your
+  data on your device rather than in a cloud database.</p>
+
+  <h2>7. Changes to this policy</h2>
+  <p>If a future version adds a feature that changes these practices (for example
+  analytics or optional cloud sync), this policy and the Google Play Data Safety
+  declaration will be updated before that version is released. The “Last updated”
+  date at the top will change.</p>
+
+  <h2>8. Contact</h2>
+  <p>Questions or concerns about this policy:</p>
+  <p><strong>Addiss Lab</strong><br>
+  Email: <a href="mailto:support@addislab.com">support@addislab.com</a></p>
+
+  <footer>YerasAI · com.addislab.yerasai · Addiss Lab</footer>
+</main>
+</body>
+</html>
