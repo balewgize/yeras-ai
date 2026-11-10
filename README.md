@@ -1,6 +1,6 @@
-# YerasAI — Free Offline AI on Your Phone
+# YerasAI: Free Offline AI on Your Phone
 
-Flutter app that runs open-source LLMs **fully on-device**. No cloud, no account, no paywall. Private by design.
+Flutter app that runs open-source LLMs **fully on-device**. No cloud, no account. Private by design.
 
 ## Features
 
@@ -20,6 +20,27 @@ Flutter app that runs open-source LLMs **fully on-device**. No cloud, no account
   <img src="https://github.com/user-attachments/assets/5547bfec-82bc-4b93-89f2-299813869053" width="45%" />
 </p>
 
+
+## Install on Android
+
+Download `app-arm64-v8a-release.apk` from the
+[latest release](https://github.com/balewgize/yeras-ai/releases/latest) and open
+it on your phone. The first install needs "install unknown apps" allowed for
+your browser or file manager.
+
+- Android 7.0 or newer, 64-bit ARM device
+- 4 GB RAM minimum; 6–8 GB is comfortable
+- 0.4–2 GB of storage per model, downloaded on first use (Wi-Fi recommended)
+
+To verify the download, run `sha256sum app-arm64-v8a-release.apk` and compare it
+with the checksum in the release notes.
+
+### What to expect
+
+These are 1B–3B parameter models running on your phone's CPU or GPU — not a
+frontier model on a server. They summarize, rewrite, translate, and answer short
+questions reasonably well. They are weaker at multi-step reasoning, current
+events, and code, and they can be confidently wrong. Check anything that matters.
 
 ## Tech stack
 
