@@ -72,11 +72,11 @@ adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
    - App access: **All functionality is available without restrictions** (no login).
    - Content rating: complete the IARC questionnaire.
    - Target audience: 13+ (or 18+ if you want to be conservative about generated text).
-   - Data safety: **No data collected, no data shared** — see the answers in `listing.md`.
+   - Data safety: **No data collected, no data shared** — see the answers in `play-store-listing.md`.
    - Government apps: No. Financial features: No. Health: No.
    - **Generative AI declaration**: yes, the app generates AI content. See the
      policy risk in section 5.
-3. **Store listing**: copy from `listing.md`; upload
+3. **Store listing**: copy from `play-store-listing.md`; upload
    `assets/branding/play_icon_512.png` and
    `assets/branding/feature_graphic.png`.
 4. **Screenshots** (still needed): at least 2 phone screenshots, 16:9 or 9:16,

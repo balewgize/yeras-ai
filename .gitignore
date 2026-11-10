@@ -45,5 +45,5 @@ app.*.map.json
 /android/app/release
 
 # Private Play Store working notes (local only; do not publish)
-/docs/play/README.md
-/docs/play/listing.md
+/play-store-notes.md
+/play-store-listing.md

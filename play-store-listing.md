@@ -9,7 +9,7 @@ YerasAI — Offline AI Chat
 ## Short description (max 80 characters)
 
 ```
-Chat with open AI models entirely on your phone. Free, private, offline.
+Free, private AI chat that runs entirely on your phone — no cloud.
 ```
 
 ## Full description (max 4000 characters)
