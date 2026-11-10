@@ -146,7 +146,8 @@ void main() {
     });
   });
 
-  testWidgets('device screen shows detected values', (WidgetTester tester) async {
+  testWidgets('device screen shows a plain-language summary',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -159,26 +160,29 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Samsung'), findsOneWidget);
-    expect(find.text('SM-A366B'), findsOneWidget);
-    expect(find.text('Qualcomm'), findsOneWidget);
+    expect(find.text('Samsung SM-A366B'), findsOneWidget);
+    expect(find.text('Android 16'), findsOneWidget);
     expect(find.text('8.6 GB'), findsOneWidget);
-    expect(find.text('4.3 GB'), findsOneWidget);
-    expect(find.text('≤ 3.0 GB'), findsOneWidget);
-    expect(find.text('34.4 GB'), findsOneWidget);
-    expect(find.text('137 GB'), findsOneWidget);
+    expect(find.text('Free ≈ 4.3 GB'), findsOneWidget);
+    expect(find.text('In use ≈ 50% · 4.3 GB'), findsOneWidget);
+    expect(find.textContaining('Mid-range'), findsOneWidget);
+    expect(find.text('34.4 GB / 137 GB'), findsOneWidget);
+    expect(find.text('Supported'), findsOneWidget);
+    expect(find.text('Suitable'), findsOneWidget);
 
     final scrollable = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.text('Hexagon NPU'),
+      find.text('Big models may be slower.'),
       200,
       scrollable: scrollable,
     );
+    expect(find.text('Big models may be slower.'), findsOneWidget);
 
-    expect(find.text('Adreno (TM) 810'), findsOneWidget);
-    expect(find.text('Vulkan 1.1'), findsOneWidget);
-    expect(find.text('Hexagon NPU'), findsOneWidget);
-    expect(find.text('Used for inference'), findsOneWidget);
+    // Technical details stay hidden.
+    expect(find.text('A36XQ'), findsNothing);
+    expect(find.text('Qualcomm'), findsNothing);
+    expect(find.text('Adreno (TM) 810'), findsNothing);
+    expect(find.text('Hexagon NPU'), findsNothing);
   });
 
   testWidgets('settings links to the device screen', (WidgetTester tester) async {
@@ -200,17 +204,10 @@ void main() {
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Device details'));
+    await tester.tap(find.text('Your device'));
     await tester.pumpAndSettle();
 
-    final scrollable = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(
-      find.text('Adreno (TM) 810'),
-      200,
-      scrollable: scrollable,
-    );
-
-    expect(find.text('Accelerators'), findsOneWidget);
-    expect(find.text('Adreno (TM) 810'), findsOneWidget);
+    expect(find.text('Samsung SM-A366B'), findsOneWidget);
+    expect(find.text('Performance'), findsOneWidget);
   });
 }

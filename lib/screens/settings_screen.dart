@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/device_capabilities.dart';
+import '../providers/device_capability_providers.dart';
 import '../providers/generation_settings_providers.dart';
 import '../providers/theme_controller.dart';
+import '../utils/format.dart';
 import '../widgets/section_header.dart';
 import 'device_info_screen.dart';
 import 'model_catalog_screen.dart';
@@ -38,41 +41,25 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 32),
-          const SectionHeader('Models'),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Models'),
-            subtitle: Text(
-              'Curated list for this device',
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            trailing: Icon(
-              Icons.chevron_right,
-              color: scheme.onSurfaceVariant,
-            ),
+          _SettingsTile(
+            title: 'Models',
+            subtitle: 'See what fits your phone',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const ModelCatalogScreen(),
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          const SectionHeader('Device'),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Device details'),
-            subtitle: Text(
-              'RAM, storage, and accelerator detection',
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            trailing: Icon(
-              Icons.chevron_right,
-              color: scheme.onSurfaceVariant,
-            ),
+          _SettingsTile(
+            title: 'Your device',
+            subtitle: ref.watch(deviceCapabilitiesProvider).when(
+                  data: _deviceSummary,
+                  loading: () => 'Checking…',
+                  error: (_, _) => 'Could not check',
+                  skipLoadingOnReload: true,
+                  skipLoadingOnRefresh: true,
+                  skipError: true,
+                ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const DeviceInfoScreen(),
@@ -84,11 +71,11 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: const Text('Generation options'),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            title: const Text('AI behavior'),
             subtitle: Text(
-              settings.isDefault
-                  ? 'Defaults · temperature ${GenerationSettings.defaultTemperature}, context ${GenerationSettings.defaultContextSize}'
-                  : 'Custom · temperature ${settings.temperature.toStringAsFixed(1)}, context ${settings.contextSize}',
+              settings.isDefault ? 'Default' : 'Custom',
               style: textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -99,12 +86,12 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Temperature',
+                      'Creativity',
                       style: textTheme.bodyMedium,
                     ),
                   ),
                   Text(
-                    settings.temperature.toStringAsFixed(1),
+                    _creativityLabel(settings.temperature),
                     style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -116,7 +103,7 @@ class SettingsScreen extends ConsumerWidget {
                 min: GenerationSettings.minTemperature,
                 max: GenerationSettings.maxTemperature,
                 divisions: 15,
-                label: settings.temperature.toStringAsFixed(1),
+                label: _creativityLabel(settings.temperature),
                 onChanged: (value) {
                   ref
                       .read(generationSettingsProvider.notifier)
@@ -124,7 +111,7 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
               Text(
-                'Lower is focused and repeatable, higher is more creative. '
+                'Focused gives direct answers, creative gives surprising ones. '
                 'Applies to the next reply.',
                 style: textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
@@ -134,15 +121,16 @@ class SettingsScreen extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Context length',
+                  'Memory',
                   style: textTheme.bodyMedium,
                 ),
               ),
               const SizedBox(height: 8),
               SegmentedButton<int>(
-                segments: [
-                  for (final size in GenerationSettings.contextOptions)
-                    ButtonSegment(value: size, label: Text('$size')),
+                segments: const [
+                  ButtonSegment(value: 1024, label: Text('Short')),
+                  ButtonSegment(value: 2048, label: Text('Standard')),
+                  ButtonSegment(value: 4096, label: Text('Long')),
                 ],
                 selected: {settings.contextSize},
                 onSelectionChanged: (selection) {
@@ -154,7 +142,7 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Longer remembers more of the conversation but uses more '
-                'memory. Takes effect the next time a model loads.',
+                'memory. Applies the next time a model loads.',
                 style: textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -185,6 +173,53 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+String _deviceSummary(DeviceCapabilities capabilities) {
+  final isFast = capabilities.accelerators
+      .any((accelerator) => accelerator.type == AcceleratorType.gpu);
+  return '${formatBytes(capabilities.memory.totalBytes)} RAM · '
+      '${formatBytes(capabilities.storage.freeBytes)} free · '
+      '${isFast ? 'Fast' : 'Standard'}';
+}
+
+String _creativityLabel(double temperature) {
+  if (temperature < 0.4) return 'Focused';
+  if (temperature < 1.0) return 'Balanced';
+  return 'Creative';
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(title),
+      subtitle: Text(
+        subtitle,
+        style: textTheme.bodySmall?.copyWith(
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: scheme.onSurfaceVariant,
+      ),
+      onTap: onTap,
     );
   }
 }

@@ -214,16 +214,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Settings'));
       await tester.pumpAndSettle();
-      expect(find.text('Temperature'), findsNothing);
-      await tester.tap(find.text('Generation options'));
+      expect(find.text('Creativity'), findsNothing);
+      await tester.tap(find.text('AI behavior'));
       await tester.pumpAndSettle();
-      expect(find.text('Temperature'), findsOneWidget);
-      expect(find.text('Context length'), findsOneWidget);
+      expect(find.text('Creativity'), findsOneWidget);
+      expect(find.text('Memory'), findsOneWidget);
 
       // Pick a non-default context length from the panel.
-      await tester.scrollUntilVisible(find.text('4096'), 200);
+      await tester.scrollUntilVisible(find.text('Long'), 200);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('4096'));
+      await tester.tap(find.text('Long'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Custom'), findsOneWidget);
 

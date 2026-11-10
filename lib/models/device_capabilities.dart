@@ -154,4 +154,32 @@ class DeviceCapabilities {
         ? halfOfTotal
         : shareOfAvailable;
   }
+
+  /// Plain-language CPU tier for the device card (High-end / Mid-range /
+  /// Entry-level), based on total RAM.
+  String get cpuTierLabel {
+    const gb = 1000 * 1000 * 1000;
+    if (memory.totalBytes >= 12 * gb) return 'High-end';
+    if (memory.totalBytes >= 6 * gb) return 'Mid-range';
+    return 'Entry-level';
+  }
+
+  /// Short verdict for the device card, based on the safe model budget.
+  /// Matches the catalog fit labels.
+  String get performanceClassLabel {
+    const gb = 1000 * 1000 * 1000;
+    final budget = conservativeModelBudgetBytes;
+    if (budget >= 4 * gb) return 'Fast';
+    if (budget >= 2 * gb) return 'Suitable';
+    return 'Limited';
+  }
+
+  /// One-line explanation shown under the device card.
+  String get performanceClassNote {
+    const gb = 1000 * 1000 * 1000;
+    final budget = conservativeModelBudgetBytes;
+    if (budget >= 4 * gb) return 'Runs most models well.';
+    if (budget >= 2 * gb) return 'Big models may be slower.';
+    return 'Best with small models.';
+  }
 }
