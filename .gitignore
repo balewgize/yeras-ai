@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Private Play Store working notes (local only; do not publish)
+/docs/play/README.md
+/docs/play/listing.md
