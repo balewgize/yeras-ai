@@ -49,7 +49,7 @@ class _YMarkPainter extends CustomPainter {
     final mark = side * extent;
     final cx = size.width / 2;
     final top = (size.height - mark) / 2;
-    final strokeWidth = mark * 0.205;
+    final strokeWidth = mark * 0.19;
 
     final paint = Paint()
       ..color = color
@@ -61,10 +61,10 @@ class _YMarkPainter extends CustomPainter {
 
     // Keep the visual mass balanced: the stem ends slightly above the
     // geometric bottom so the round cap does not look too low.
-    final left = Offset(cx - mark * 0.285, top + mark * 0.11);
-    final right = Offset(cx + mark * 0.285, top + mark * 0.11);
-    final joint = Offset(cx, top + mark * 0.47);
-    final bottom = Offset(cx, top + mark * 0.86);
+    final left = Offset(cx - mark * 0.30, top + mark * 0.10);
+    final right = Offset(cx + mark * 0.30, top + mark * 0.10);
+    final joint = Offset(cx, top + mark * 0.445);
+    final bottom = Offset(cx, top + mark * 0.855);
 
     canvas.drawLine(left, joint, paint);
     canvas.drawLine(right, joint, paint);
@@ -76,7 +76,7 @@ class _YMarkPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.extent != extent;
 }
 
-Widget _iconArt({required bool withBackground, double markExtent = 0.56}) {
+Widget _iconArt({required bool withBackground, double markExtent = 0.50}) {
   return DecoratedBox(
     decoration: BoxDecoration(
       color: withBackground ? kAccent : Colors.transparent,
@@ -91,9 +91,9 @@ Widget _iconArt({required bool withBackground, double markExtent = 0.56}) {
   );
 }
 
-Widget _playIcon() => _iconArt(withBackground: true, markExtent: 0.52);
+Widget _playIcon() => _iconArt(withBackground: true, markExtent: 0.50);
 
-Widget _adaptiveForeground() => _iconArt(withBackground: false, markExtent: 0.78);
+Widget _adaptiveForeground() => _iconArt(withBackground: false, markExtent: 0.68);
 
 Widget _featureGraphic() {
   return ColoredBox(
@@ -172,7 +172,7 @@ Widget _featureGraphic() {
           height: double.infinity,
           color: kAccent,
           child: const Center(
-            child: YMonogram(color: kWhite, extent: 0.46),
+            child: YMonogram(color: kWhite, extent: 0.44),
           ),
         ),
       ],
@@ -245,7 +245,7 @@ void main() {
   testWidgets('app icon 1024', (tester) async {
     await _capture(
       tester,
-      _iconArt(withBackground: true, markExtent: 0.52),
+      _iconArt(withBackground: true, markExtent: 0.50),
       kSquare,
       '$root/assets/branding/app_icon.png',
     );
